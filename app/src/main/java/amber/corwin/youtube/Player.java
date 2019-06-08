@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.PowerManager;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
@@ -45,6 +46,7 @@ public class Player {
     private void onVideoReady(MediaPlayer mediaPlayer) {
         this.mediaPlayer = mediaPlayer;
         mediaPlayer.setVolume(0.5f, 0.5f);
+        mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);
         video.setLayoutParams(
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));

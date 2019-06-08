@@ -2,3 +2,18 @@ video {
     width: 100%;
     display: block;
 }
+
+#search-box button {
+    width: 24px;
+    border: none;
+    padding: 0;
+    vertical-align: middle;
+}
+
+#search-box button:active {
+    background: #ccc;
+}
+
+#search-box *:focus {
+    outline: none;
+}

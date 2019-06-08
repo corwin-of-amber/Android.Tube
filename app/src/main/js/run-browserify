@@ -1,3 +1,3 @@
-browserify ytdl.js -o ../assets/js/ytdl.browser.js \
+browserify ytdl.js -o ../assets/js/lib/ytdl.browser.js \
    --global-transform [ babelify --presets [ @babel/preset-env ] \
    --plugins [ @babel/plugin-transform-object-assign ] ]

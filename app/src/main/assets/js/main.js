@@ -1,19 +1,5 @@
 'use strict';
 
-const key = 'AIzaSyAa8yy0GdcGPHdtD083HiGGx_S0vMPScDM',
-      api_endpoint = 'https://content.googleapis.com/youtube/v3',
-      api_origin = 'https://explorer.apis.google.com';
-
-
-function search(query) {
-    var url=`${api_endpoint}/search?maxResults=25&part=snippet&q=${query}&key=${key}`;
-    return new Promise(function(resolve, reject) {
-        $.getJSON({url: url, headers: {'X-Origin': api_origin}})
-        .done(function(data) { resolve(data); })
-        .fail(function(jq) { reject(jq.responseJSON); });
-    });
-}
-
 function watch(youtubeUrl) {
     ytdl.getInfo(youtubeUrl, function (err, info) {
         if (err) {
@@ -27,14 +13,16 @@ function watch(youtubeUrl) {
                 i++;
                 console.log(`format #${i}/${n}: ${format.type}
                     '${format.url}'`);
-                if (!webm && format.type.startsWith('video/webm;')) webm = format;
+                if (!webm && format.type.startsWith('video/')) webm = format;
             }
 
-            webm = info.formats[0];
+            //webm = info.formats[0];
 
             if (webm) {
-                //play(info.formats[0].url);
-                mainActivity.receivedUrl(youtubeUrl, webm.type, webm.url);
+                if (typeof mainActivity === 'undefined')
+                    play(webm.url);
+                else
+                    mainActivity.receivedUrl(youtubeUrl, webm.type, webm.url);
             }
         }
     });
@@ -43,11 +31,8 @@ function watch(youtubeUrl) {
 function play(mediaUrl) {
     var v = $('<video>').attr('controls', true),
         b = $('<button>').text("<");
-    v.append($('<source>').attr('src', mediaUrl).attr('type', 'video/mp4'));
-    b.click(function() {
-        showSearchResults(lastSearchResults || []);
-    });
-    $('body').empty().append(v, b);
+    v.append($('<source>').attr('src', mediaUrl));
+    $('#video-area').html(v);
 }
 
 var lastSearchResults = undefined;
@@ -71,7 +56,9 @@ window.onmessage = function(msg) {
     var cmd = JSON.parse(msg.data);
     switch (cmd.type) {
     case 'watch':  watch(cmd.url); break;
-    case 'search': search(cmd.text).then(showSearchResults); break;
+    case 'search': ui.search(cmd.text); break;
+
+    //search(cmd.text).then(showSearchResults); break;
     }
 };
 /*watch('https://www.youtube.com/watch?v=mBnkvdM56XQ');*/

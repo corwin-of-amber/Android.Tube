@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
         //final String initialMessage =
         //        "{\"type\": \"watch\", \"url\": \"https://www.youtube.com/watch?v=ntj-sP8y3kw\"}";
         final String initialMessage =
-                "{\"type\": \"search\", \"text\": \"einaudi\"}";
+                "{\"type\": \"search\", \"text\": \"einaudi seven\"}";
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -77,11 +77,15 @@ public class MainActivity extends Activity {
 
         webView.loadDataWithBaseURL("file:///main.html",
                 "<html><head>" +
-                        "<script src=\"./js/jquery.js\"></script>" +
-                        "<script src=\"./js/ytdl.browser.js\"></script>" +
+                        "<script src=\"./js/lib/jquery.js\"></script>" +
+                        "<script src=\"./js/lib/lodash.min.js\"></script>" +
+                        "<script src=\"./js/lib/vue.min.js\"></script>" +
+                        "<script src=\"./js/lib/ytdl.browser.js\"></script>" +
                         "<script src=\"./js/main.js\"></script>" +
+                        "<script src=\"./js/components/search.js\"></script>" +
                         "<link rel=\"stylesheet\" type=\"text/css\" href=\"./css/yt.css\">" +
-                        "</head><body>YouTube</body></html>", "text/html",
+                        "</head><body><div id=\"search-ui\"></div></body></html>",
+                "text/html",
                 "utf-8", null);
     }
 
