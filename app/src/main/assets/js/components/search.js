@@ -56,22 +56,30 @@ $(function() {
 
     Vue.component('video-snippet', {
         props: ['item'],
-        data() { return {duration: 'KK'}; },
-        created() {
-            const self = this;
-            yapi.details(this.item.id.videoId).then(function(res) {
-                self.duration = res.duration;
-            });
+        data() { return {duration: undefined}; },
+        created() { this.fetchDetails(); },
+        watch: {
+            item() { this.fetchDetails(); }
         },
         template: `
             <p class="video-snippet" @click="$emit('click')">
-                <span v-html="item.snippet.title"/>
+                <span class="title" v-html="item.snippet.title"/>
                 <span class="duration" v-if="duration">{{timestamp(duration)}}</span>
             </p>
         `,
         methods: {
+            fetchDetails() {
+                this.duration = undefined;
+                const self = this;
+                yapi.details(this.item.id.videoId).then(function(res) {
+                    self.duration = res.duration;
+                });
+            },
             timestamp(pt) {
-                return pt.split(/\D+/).filter(function(x) { return x; })
+                var mo = pt.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                var h = mo[1], m = mo[2] || '0', s = mo[3] || '0';
+
+                return [h, m, s].filter(function(x) { return x; })
                     .map(function(x) {return x.padStart(2, '0'); }).join(':');
             }
         }

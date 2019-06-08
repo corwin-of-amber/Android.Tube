@@ -3,11 +3,35 @@ video {
     display: block;
 }
 
+video:focus {
+    outline: none;
+}
+
+#search-box {
+    margin-top: 9px;
+    display: flex;
+    border: 1px solid #ccc;
+    padding: 0 2px;
+}
+
+#search-box input {
+    border: none;
+    flex-grow: 1;
+    font-size: 14px;
+    vertical-align: middle;
+    height: 28px;
+}
+
 #search-box button {
     width: 24px;
+    background: none;
     border: none;
     padding: 0;
     vertical-align: middle;
+}
+
+#search-box button path {
+    fill: #ccc;
 }
 
 #search-box button:active {
@@ -16,4 +40,23 @@ video {
 
 #search-box *:focus {
     outline: none;
+}
+
+#search-results {
+    font-family: sans-serif;
+    font-size: 14px;
+    line-height: 17px;
+}
+
+#search-results .video-snippet {
+    display: flex;
+    cursor: pointer;
+}
+
+#search-results .video-snippet .title {
+    flex-grow: 1;
+}
+
+#search-results .video-snippet .duration {
+    margin-left: .5em;
 }
