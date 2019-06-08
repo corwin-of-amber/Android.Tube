@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
 
         webView.loadDataWithBaseURL("file:///main.html",
                 "<html><head>" +
-                        "<script src=\"./js/lib/jquery.js\"></script>" +
+                        "<script src=\"./js/lib/jquery.min.js\"></script>" +
                         "<script src=\"./js/lib/lodash.min.js\"></script>" +
                         "<script src=\"./js/lib/vue.min.js\"></script>" +
                         "<script src=\"./js/lib/ytdl.browser.js\"></script>" +
