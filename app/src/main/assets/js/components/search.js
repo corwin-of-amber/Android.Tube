@@ -107,6 +107,9 @@ $(function() {
                 yapi.search(query).then(function(res) {
                     self.searchResults = res.items;
                 });
+            },
+            blur() {
+                $(this.$el).find('input').blur();
             }
         },
         watch: {
@@ -118,7 +121,7 @@ $(function() {
         template: `
             <div>
                 <div id="search-box">
-                    <input v-model="searchQuery">
+                    <input v-model="searchQuery" @keydown.enter="blur()">
                     <search-button/>
                 </div>
                 <div id="search-results">
