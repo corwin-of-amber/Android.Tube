@@ -5,15 +5,17 @@
         <script src="node_modules/vue/dist/vue.js"></script>
         <script src="app/src/main/assets/js/lib/ytdl.browser.js"></script>
         <script src="app/src/main/assets/js/main.js"></script>
+        <script src="app/src/main/assets/js/server.js"></script>
         <script src="app/src/main/assets/js/components/search.js"></script>
+        <script src="app/src/main/assets/js/components/volume.js"></script>
 
         <link rel="stylesheet" type="text/css" href="app/src/main/assets/css/yt.css">
     </head>
     <body>
         <div id="video-area"></div>
-        <div id="search-ui">
+        <div id="ui-container">
         </div>
     </body>
 
-    <script>$(() => ui.search("bangles"));</script>
+    <script>$(() => app.$refs.search.search("bangles"));</script>
 </html>

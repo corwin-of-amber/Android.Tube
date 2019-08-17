@@ -5,6 +5,7 @@ import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.PowerManager;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
@@ -12,6 +13,9 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 public class Player {
+
+    static final String TAG = "Player";
+
     private Activity context;
 
     private MediaPlayer mediaPlayer;
@@ -51,6 +55,10 @@ public class Player {
                 video.setVideoURI(uri);
             }
         });
+    }
+
+    void setVolume(int level, int max) {
+        setVolume((float)level / max);
     }
 
     void setVolume(float volume){
