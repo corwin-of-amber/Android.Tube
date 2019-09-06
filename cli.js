@@ -2,15 +2,18 @@
 
 const http = require('http');
 
-const BASE = new URL('http://10.0.0.6:2224');
+const BASE = new URL('http://10.0.0.11:2224');
 
 function play(url) {
     post({type: 'watch', url: encodeURI(url)});
 }
 
-function stop() {
-    post({type: 'stop'});
+function search(query) {
+    post({type: 'search', text: query});
 }
+
+function pause() { get("/pause"); }
+function resume() { get("/resume"); }
 
 function post(data) {
     if (typeof data !== 'string') data = JSON.stringify(data);
@@ -35,11 +38,35 @@ function post(data) {
     req.end();
 }
 
+function get(path) {
+    var req = http.request({
+        hostname: BASE.hostname, port: Number(BASE.port || 80),
+        path: path,
+        method: 'GET'
+    }, (res) => {
+         res.pipe(process.stdout);
+     });
+
+    req.on('error', (e) => {
+        console.error(`problem with request '${path}': ${e.message}`);
+    });
+
+    req.end();
+}
+
 
 var opts = require('commander'), done;
 
 opts.command('play <url>')
-    .action((url) => { console.log({url}); play(url); done = true; });
+    .action((url) => { play(url); done = true; });
+opts.command('stop')
+    .action((text) => { pause(); done = true; });
+opts.command('pause')
+    .action((text) => { pause(); done = true; });
+opts.command('resume')
+    .action((text) => { resume(); done = true; });
+opts.command('search <text>')
+    .action((text) => { search(text); done = true; });
 
 opts.parse(process.argv);
 

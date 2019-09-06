@@ -2,6 +2,7 @@ package amber.corwin.youtube;
 
 import android.app.Activity;
 import android.content.Context;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.PowerManager;
@@ -11,6 +12,8 @@ import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
+
+import java.io.IOException;
 
 public class Player {
 
@@ -22,7 +25,7 @@ public class Player {
     private MediaController mediaController;
     private VideoView video;
 
-    private float volume = 0.5f;
+    private float volume = 1.0f;
 
     Player(Activity context) {
         this.context = context;
@@ -49,12 +52,39 @@ public class Player {
     }
 
     void playMedia(final Uri uri) {
-        context.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                video.setVideoURI(uri);
+        if (this.video != null) {
+            context.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    video.setVideoURI(uri);
+                }
+            });
+        }
+        else {
+            if (mediaPlayer != null) mediaPlayer.stop();
+
+            MediaPlayer player = new MediaPlayer();
+            player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            try {
+                player.setDataSource(this.context.getApplicationContext(), uri);
+                player.setVolume(volume, volume);
+                player.prepare();
+                player.start();
+                mediaPlayer = player;
             }
-        });
+            catch (IOException e) {
+                Toast.makeText(this.context, "Failed to open " + uri, Toast.LENGTH_LONG).show();
+                mediaPlayer = null;
+            }
+        }
+    }
+
+    void pause() {
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) mediaPlayer.pause();
+    }
+
+    void resume() {
+        if (mediaPlayer != null && !mediaPlayer.isPlaying()) mediaPlayer.start();
     }
 
     void setVolume(int level, int max) {

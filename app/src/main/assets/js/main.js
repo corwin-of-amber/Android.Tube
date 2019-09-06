@@ -19,7 +19,7 @@ function getStream(youtubeUrl) {
     return new Promise(function(resolve, reject) {
         ytdl.getInfo(youtubeUrl, function (err, info) {
             if (err) {
-                console.err('ytdl error:\n' + err);
+                console.error('ytdl error:\n' + err);
                 reject(err);
             }
             else if (info) {
@@ -68,12 +68,20 @@ function showSearchResults(results) {
 
 function action(cmd) {
     switch (cmd.type) {
-    case 'watch':  return watch(cmd.url); break;
-    case 'search': return app.search(cmd.text); break;
+    case 'watch':    return watch(cmd.url); break;
+    case 'search':   return app.search(cmd.text); break;
+    case 'details':  return yapi.details(cmd.videoId); break;
     case 'request':
-        action(cmd.inner).then(function() { mainActivity.postResponse("ok"); })
-          .catch(function(e) { mainActivity.postResponse("error: " + e); });
+        var id = cmd.id;
+        action(cmd.inner).then(function(res) {
+            mainActivity.postResponse(id, res ? JSON.stringify(res) : "ok");
+        })
+        .catch(function(e) { mainActivity.postResponse(id, "error: " + e); });
         break;
+    default:
+        var errmsg = "unknown command '" + cmd.type + "'";
+        console.error(errmsg);
+        return Promise.reject(errmsg);
     }
 }
 

@@ -8,7 +8,9 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
@@ -26,9 +28,12 @@ import android.widget.VideoView;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.Reader;
+import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,6 +48,8 @@ public class MainActivity extends Activity {
 
     private Server httpd;
 
+    private PowerManager.WakeLock wakeLock;
+
     private static final String HTML =
             "<html><head>" +
                     "<script src=\"./js/lib/jquery.min.js\"></script>" +
@@ -50,6 +57,7 @@ public class MainActivity extends Activity {
                     "<script src=\"./js/lib/vue.min.js\"></script>" +
                     "<script src=\"./js/lib/ytdl.browser.js\"></script>" +
                     "<script src=\"./js/main.js\"></script>" +
+                    "<script src=\"./js/yapi.js\"></script>" +
                     "<script src=\"./js/components/search.js\"></script>" +
                     "<script src=\"./js/components/volume.js\"></script>" +
                     "<link rel=\"stylesheet\" type=\"text/css\" href=\"./css/yt.css\">" +
@@ -65,7 +73,7 @@ public class MainActivity extends Activity {
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 
         player = new Player(this);
-        player.attach((VideoView) findViewById(R.id.video));
+        //player.attach((VideoView) findViewById(R.id.video));
 
         webView = findViewById(R.id.webview);
 
@@ -104,13 +112,24 @@ public class MainActivity extends Activity {
         });
 
         webView.loadDataWithBaseURL("file:///main.html",
-                HTML,
+                readAsString(openAsset("/html/app.html")),
                 "text/html",
                 "utf-8", null);
 
         startServer();
+
+        // CPU Wake lock  :/
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                TAG + " ::CPUWakeLock");
+        wakeLock.acquire();
     }
 
+    @Override
+    protected void onDestroy() {
+        wakeLock.release();
+        super.onDestroy();
+    }
 
     InputStream openAsset(String path) {
         if (path.startsWith("/")) path = path.substring(1);
@@ -120,6 +139,22 @@ public class MainActivity extends Activity {
         catch (IOException e) {
             Log.e(TAG, "missing asset, " + path);
             return new ByteArrayInputStream(new byte[0]); // empty :/
+        }
+    }
+
+    String readAsString(InputStream in) { return readAsString(in, 4096); }
+
+    String readAsString(InputStream in, int capacity) {
+        Reader r = new InputStreamReader(in);
+        CharBuffer b = CharBuffer.allocate(capacity);
+        try {
+            while (r.read(b) > 0) ;
+            int size = b.position(); b.rewind();
+            return b.subSequence(0, size).toString();
+        }
+        catch (IOException e) {
+            Log.e(TAG, "error reading from stream", e);
+            return "";
         }
     }
 
@@ -136,12 +171,8 @@ public class MainActivity extends Activity {
             player.setVolume(level, max);
         }
         @JavascriptInterface
-        public void postResponse(String resp) throws IOException {
-            OutputStream pipe = httpd.clientResponseStream;
-            httpd.clientResponseStream = null;
-
-            pipe.write(resp.getBytes());
-            pipe.close();
+        public void postResponse(int id, String resp) throws IOException {
+            httpd.postResponse(id, resp);
         }
     }
 
@@ -171,7 +202,8 @@ public class MainActivity extends Activity {
 
     class Server extends NanoHTTPD {
 
-        OutputStream clientResponseStream = null;
+        private int nextReqId = 3;
+        SparseArray<OutputStream> pendingRequests = new SparseArray<>();
 
         Server() { super(2224); }
 
@@ -182,24 +214,35 @@ public class MainActivity extends Activity {
 
             if (path.equals("/") && method == Method.GET)
                 return index();
-            if (path.startsWith("/js/") || path.startsWith("/css/"))
+            else if (path.equals("/js/yapi.js"))
+                return asset("/js/client.js");
+            else if (path.startsWith("/js/") || path.startsWith("/css/"))
                 return asset(path);
-            if (path.startsWith("/vol"))
+            else if (path.startsWith("/vol"))
                 return vol(session);
-            if (method == Method.POST)
+            else if (path.equals("/pause"))
+                return pause();
+            else if (path.equals("/resume"))
+                return resume();
+            else if (method == Method.POST)
                 return handlePost(session);
             else
                 return super.serve(session);
         }
 
         private Response index() {
-            return newFixedLengthResponse(Response.Status.OK, "text/html", HTML);
+            return newChunkedResponse(Response.Status.OK, "text/html",
+                    openAsset("/html/app.html"));
         }
 
         private Response asset(String path) {
             return newChunkedResponse(Response.Status.OK, "text/javascript",
                     openAsset(path));
         }
+
+        private Response pause() { player.pause(); return ok(); }
+
+        private Response resume() { player.resume(); return ok(); }
 
         private Response vol(IHTTPSession session) {
             String q = session.getQueryParameterString();
@@ -214,11 +257,15 @@ public class MainActivity extends Activity {
                     if (volumes.length >= 2 && volumes[1].length() > 0) {
                         setVolume(VolumeSetting.parse(volumes[1]));
                     }
-                    return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
+                    return ok();
                 }
             } catch (NumberFormatException e) {
                 return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","bad request 'vol?" + q + "'");
             }
+        }
+
+        private Response ok() {
+            return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
         }
 
         Response handlePost(IHTTPSession session) {
@@ -235,14 +282,17 @@ public class MainActivity extends Activity {
                 return super.serve(session);
             }
 
-            final String msg = "{\"type\": \"request\", \"inner\": " + postData + "}";
+            int id = nextReqId++;
+
+            final String msg = "{\"type\": \"request\", \"id\": " + id + ", \"inner\": " + postData + "}";
 
             PipedInputStream data = new PipedInputStream();
             PipedOutputStream pipe = new PipedOutputStream();
             try {
                 pipe.connect(data);
-                if (clientResponseStream != null) clientResponseStream.close();
-                clientResponseStream = pipe;
+                synchronized (this) {
+                    pendingRequests.put(id, pipe);
+                }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -250,7 +300,7 @@ public class MainActivity extends Activity {
                             webView.postWebMessage(new WebMessage(msg), Uri.EMPTY);
                         }
                         else {
-                            webView.evaluateJavascript("onmessage({data: '" + msg + "'})",
+                            webView.evaluateJavascript("onmessage({data: '" + quote(msg) + "'})",
                                     new ValueCallback<String>() {
                                         @Override
                                         public void onReceiveValue(String s) {     }
@@ -264,6 +314,29 @@ public class MainActivity extends Activity {
                 Log.e(TAG, "Server.serve", e);
                 return super.serve(session);
             }
+        }
+
+        void postResponse(int id, String resp) {
+            OutputStream pipe;
+            synchronized (this) {
+                pipe = this.pendingRequests.get(id);
+            }
+            if (pipe != null) {
+                try {
+                    pipe.write(resp.getBytes());
+                    pipe.close();
+                }
+                catch (IOException e) {
+                    Log.w(TAG, "response is lost", e);
+                }
+                finally {
+                    this.pendingRequests.remove(id);
+                }
+            }
+        }
+
+        private String quote(String s) {
+            return s.replace("\\", "\\\\").replace("'", "\\'");
         }
     }
 
