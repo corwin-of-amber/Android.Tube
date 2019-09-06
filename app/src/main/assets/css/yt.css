@@ -24,18 +24,39 @@ body {
     direction: ltr;
 }
 
-#ui-container > input[type="range"] {
-    -webkit-appearance: slider-vertical;
-    width: 40px;
+#ui-container > input.volume-control {
     position: fixed;
-    right: 0;
-    top: 50px;
-    bottom: 50%;
-    min-height: 150px;
+    top: calc(25vh + 50px);
+    right: calc(10px - 25vh);
+    width: 50vh;
+    height: 30px;
 }
 
-input[type="range"]::-webkit-slider-runnable-track {
-    background: navajowhite;
+input.volume-control {
+    -webkit-appearance: none;
+    transform: rotate(270deg);
+    background: #fff;
+}
+
+input.volume-control::-webkit-slider-runnable-track {
+    background: linear-gradient(to top left,
+        #ddd 0%, #ddd 50%, #fff 50%, #fff 100%);
+    height: 20px;
+    border: none;
+}
+
+input.volume-control::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 25px;
+    background: white;
+    border: 2px solid black;
+    border-radius: 23px;
+    margin-top: -2px;
+}
+
+input[type="range"]:focus {
+    outline: none;
 }
 
 #search-box {
@@ -77,7 +98,7 @@ input[type="range"]::-webkit-slider-runnable-track {
     font-family: sans-serif;
     font-size: 14px;
     line-height: 17px;
-    margin-right: 35px;  /* room for volume control */
+    margin-right: 30px;  /* room for volume control */
 }
 
 #search-results .video-snippet {

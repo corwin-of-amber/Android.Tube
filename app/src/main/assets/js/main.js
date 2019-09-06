@@ -1,12 +1,18 @@
 'use strict';
 
-function watch(youtubeUrl) {
-    getStream(youtubeUrl).then(function(webm) {
+function watch(urlOrId) {
+    return getWatchUrl(urlOrId).then(function(webm) {
         if (typeof mainActivity === 'undefined')
             play(webm.url);
         else
-            mainActivity.receivedUrl(youtubeUrl, webm.type, webm.url);
+            mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
     });
+}
+
+function getWatchUrl(urlOrId) {
+    console.log(urlOrId, ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId));
+    if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId)) return getStream(urlOrId);
+    else return Promise.resolve({url: urlOrId, type: 'unknown'});
 }
 
 function getStream(youtubeUrl) {
@@ -62,9 +68,12 @@ function showSearchResults(results) {
 
 function action(cmd) {
     switch (cmd.type) {
-    case 'watch':  watch(cmd.url); break;
-    case 'search': app.search(cmd.text); break;
-    case 'request': mainActivity.postResponse("ok"); action(cmd.inner); break;
+    case 'watch':  return watch(cmd.url); break;
+    case 'search': return app.search(cmd.text); break;
+    case 'request':
+        action(cmd.inner).then(function() { mainActivity.postResponse("ok"); })
+          .catch(function(e) { mainActivity.postResponse("error: " + e); });
+        break;
     }
 }
 

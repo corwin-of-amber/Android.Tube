@@ -6,12 +6,13 @@ import android.icu.util.Output;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebMessage;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -42,6 +43,19 @@ public class MainActivity extends Activity {
 
     private Server httpd;
 
+    private static final String HTML =
+            "<html><head>" +
+                    "<script src=\"./js/lib/jquery.min.js\"></script>" +
+                    "<script src=\"./js/lib/lodash.min.js\"></script>" +
+                    "<script src=\"./js/lib/vue.min.js\"></script>" +
+                    "<script src=\"./js/lib/ytdl.browser.js\"></script>" +
+                    "<script src=\"./js/main.js\"></script>" +
+                    "<script src=\"./js/components/search.js\"></script>" +
+                    "<script src=\"./js/components/volume.js\"></script>" +
+                    "<link rel=\"stylesheet\" type=\"text/css\" href=\"./css/yt.css\">" +
+                    "</head><body><div id=\"ui-container\"></div>"+
+            "</body></html>";
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,8 +77,6 @@ public class MainActivity extends Activity {
 
         Log.i(TAG, "-- start --");
 
-        //final String initialMessage =
-        //        "{\"type\": \"watch\", \"url\": \"https://www.youtube.com/watch?v=ntj-sP8y3kw\"}";
         final String initialMessage =
                 "{\"type\": \"search\", \"text\": \"lara fabian\"}";
 
@@ -73,9 +85,10 @@ public class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(final WebView view, WebResourceRequest req) {
                 Log.i(TAG, "URL: " + req.getUrl());
                 String scheme = req.getUrl().getScheme();
-                if (scheme != null && scheme.equals("file")) {
+                String path = req.getUrl().getPath();
+                if (scheme != null && scheme.equals("file") && path != null) {
                     return new WebResourceResponse("text/javascript", "UTF-8",
-                            openAsset(req.getUrl().getPath()));
+                            openAsset(path));
                 } else {
                     return super.shouldInterceptRequest(view, req);
                 }
@@ -84,21 +97,14 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                view.postWebMessage(new WebMessage(initialMessage), Uri.EMPTY);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    view.postWebMessage(new WebMessage(initialMessage), Uri.EMPTY);
+                }
             }
         });
 
         webView.loadDataWithBaseURL("file:///main.html",
-                "<html><head>" +
-                        "<script src=\"./js/lib/jquery.min.js\"></script>" +
-                        "<script src=\"./js/lib/lodash.min.js\"></script>" +
-                        "<script src=\"./js/lib/vue.min.js\"></script>" +
-                        "<script src=\"./js/lib/ytdl.browser.js\"></script>" +
-                        "<script src=\"./js/main.js\"></script>" +
-                        "<script src=\"./js/components/search.js\"></script>" +
-                        "<script src=\"./js/components/volume.js\"></script>" +
-                        "<link rel=\"stylesheet\" type=\"text/css\" href=\"./css/yt.css\">" +
-                        "</head><body><div id=\"ui-container\"></div></body></html>",
+                HTML,
                 "text/html",
                 "utf-8", null);
 
@@ -143,22 +149,15 @@ public class MainActivity extends Activity {
     // AudioManager Part
     // -----------------
 
-    static class VolumeSetting {
-        public int level;
-        public int max;
-        VolumeSetting(int level, int max) { this.level = level; this.max = max; }
-
-        @Override @NonNull
-        public String toString() {
-            return "" + level + "/" + max;
-        }
-    }
-
     AudioManager audioManager = null;
 
     void setVolume(int level, int max) {
         int volMax = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, level * volMax / max, 0);
+    }
+
+    void setVolume(VolumeSetting vol) {
+        setVolume(vol.level, vol.max);
     }
 
     VolumeSetting getVolume() {
@@ -181,6 +180,10 @@ public class MainActivity extends Activity {
             Method method = session.getMethod();
             String path = session.getUri();
 
+            if (path.equals("/") && method == Method.GET)
+                return index();
+            if (path.startsWith("/js/") || path.startsWith("/css/"))
+                return asset(path);
             if (path.startsWith("/vol"))
                 return vol(session);
             if (method == Method.POST)
@@ -189,22 +192,29 @@ public class MainActivity extends Activity {
                 return super.serve(session);
         }
 
+        private Response index() {
+            return newFixedLengthResponse(Response.Status.OK, "text/html", HTML);
+        }
+
+        private Response asset(String path) {
+            return newChunkedResponse(Response.Status.OK, "text/javascript",
+                    openAsset(path));
+        }
+
         private Response vol(IHTTPSession session) {
             String q = session.getQueryParameterString();
             try {
                 if (q == null || q.equals(""))
-                    return newFixedLengthResponse("" + getVolume());
+                    return newFixedLengthResponse("" + player.getVolume() + ";" + getVolume());
                 else {
-                    String[] parts = q.split("/");
-                    if (parts.length == 2) {
-                        int level = Integer.parseInt(parts[0]);
-                        int max = Integer.parseInt(parts[1]);
-                        if (max > 0 && level <= max)
-                            setVolume(level, max);
-                        else throw new NumberFormatException();
+                    String[] volumes = q.split(";");
+                    if (volumes.length >= 1 && volumes[0].length() > 0) {
+                        player.setVolume(VolumeSetting.parse(volumes[0]));
                     }
-                    else throw new NumberFormatException();
-                    return newFixedLengthResponse("ok");
+                    if (volumes.length >= 2 && volumes[1].length() > 0) {
+                        setVolume(VolumeSetting.parse(volumes[1]));
+                    }
+                    return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
                 }
             } catch (NumberFormatException e) {
                 return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","bad request 'vol?" + q + "'");
@@ -236,7 +246,16 @@ public class MainActivity extends Activity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        webView.postWebMessage(new WebMessage(msg), Uri.EMPTY);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            webView.postWebMessage(new WebMessage(msg), Uri.EMPTY);
+                        }
+                        else {
+                            webView.evaluateJavascript("onmessage({data: '" + msg + "'})",
+                                    new ValueCallback<String>() {
+                                        @Override
+                                        public void onReceiveValue(String s) {     }
+                                    });
+                        }
                     }
                 });
                 return newChunkedResponse(Response.Status.OK, "text/json", data);

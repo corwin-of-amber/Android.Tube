@@ -67,6 +67,14 @@ public class Player {
             mediaPlayer.setVolume(volume, volume);
     }
 
+    void setVolume(VolumeSetting vol) {
+        setVolume(vol.level, vol.max);
+    }
+
+    VolumeSetting getVolume() {
+        return new VolumeSetting((int)(volume * 1000), 1000);
+    }
+
     private void onVideoReady(MediaPlayer mediaPlayer) {
         this.mediaPlayer = mediaPlayer;
         mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);

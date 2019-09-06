@@ -93,14 +93,14 @@ Vue.component('search-ui', {
     methods: {
         search(query) {
             this.searchQuery = query;
-            this._performSearch(query);  // invoke search immediately
+            return this._performSearch(query);  // invoke search immediately
         },
         _performSearch(query) {
             if (this._lastSearch === query) return; // perf
             else this._lastSearch = query;
 
             const self = this;
-            yapi.search(query).then(function(res) {
+            return yapi.search(query).then(function(res) {
                 self.searchResults = res.items;
             });
         },
@@ -144,7 +144,7 @@ $(function() {
         `,
         methods: {
             search(query) {
-                this.$refs.search.search(query);
+                return this.$refs.search.search(query);
             },
             watch(item) {
                 watch(item.id.videoId);
