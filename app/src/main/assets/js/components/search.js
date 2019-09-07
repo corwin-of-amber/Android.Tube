@@ -21,14 +21,14 @@ Vue.component('search-button', {
 });
 
 Vue.component('video-snippet', {
-    props: ['item'],
+    props: ['item', 'active'],
     data() { return {duration: undefined}; },
     created() { this.fetchDetails(); },
     watch: {
         item() { this.fetchDetails(); }
     },
     template: `
-        <p class="video-snippet" @click="$emit('click')">
+        <p class="video-snippet" :class="{active: active}" @click="$emit('click')">
             <span class="title" v-html="item.snippet.title"/>
             <span class="duration" v-if="duration">{{timestamp(duration)}}</span>
         </p>
@@ -52,6 +52,7 @@ Vue.component('video-snippet', {
 });
 
 Vue.component('search-ui', {
+    props: ['active'],
     data: function() { return {
         searchQuery: '',
         searchResults: []
@@ -93,7 +94,8 @@ Vue.component('search-ui', {
             <div id="search-results">
                 <template v-for="item in searchResults">
                     <video-snippet v-if="item.id.kind === 'youtube#video'"
-                        :item="item" @click="$emit('selected', item)"/>
+                        :item="item" :active="item.id.videoId === active"
+                        @click="$emit('selected', item)"/>
                 </template>
             </div>
         </div>
@@ -106,10 +108,11 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
+        data: {curPlaying: undefined, status: 'ready'},
         template: `
-            <div id="ui-container">
+            <div id="ui-container" :class="status">
                 <volume-control ref="volume"></volume-control>
-                <search-ui ref="search" @selected="watch"></search-ui>
+                <search-ui ref="search" @selected="watch" :active="curPlaying"></search-ui>
             </div>
         `,
         methods: {
@@ -117,7 +120,11 @@ $(function() {
                 return this.$refs.search.search(query);
             },
             watch(item) {
-                watch(item.id.videoId);
+                var self = this;
+                this.status = 'pending';
+                watch(this.curPlaying = item.id.videoId)
+                .catch(function() { self.status = 'error'; })
+                .then(function() { self.status = 'playing'; });
             }
         }
     });

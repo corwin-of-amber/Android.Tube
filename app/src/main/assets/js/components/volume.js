@@ -11,5 +11,10 @@ Vue.component('volume-control', {
                 mainActivity.setVolume(level, self.max);
             });
         }
+        else if (typeof server_action !== 'undefined') {
+            this.$watch('level', function(level) {
+                server_action('vol?' + level + '/' + self.max);
+            });
+        }
     }
 });

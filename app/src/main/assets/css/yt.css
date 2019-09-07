@@ -1,5 +1,5 @@
 video {
-    width: 100%;
+    width: 20%;
     display: block;
 }
 
@@ -27,7 +27,7 @@ body {
 #ui-container > input.volume-control {
     position: fixed;
     top: calc(25vh + 50px);
-    right: calc(10px - 25vh);
+    right: calc(13px - 25vh);
     width: 50vh;
     height: 30px;
 }
@@ -104,6 +104,21 @@ input[type="range"]:focus {
 #search-results .video-snippet {
     display: flex;
     cursor: pointer;
+    margin: 0;
+    padding: 9px 2px;
+}
+
+#search-results .video-snippet.active {
+    background: #4747ff;
+    color: white;
+}
+
+.pending #search-results .video-snippet.active {
+    animation: blink-animation 1s steps(20, start) infinite;
+}
+
+.error #search-results .video-snippet.active {
+    background: #a53535;
 }
 
 #search-results .video-snippet .title {
@@ -112,4 +127,11 @@ input[type="range"]:focus {
 
 #search-results .video-snippet .duration {
     margin-left: .5em;
+}
+
+
+@keyframes blink-animation {
+  50% {
+    background: #8484ff;
+  }
 }
