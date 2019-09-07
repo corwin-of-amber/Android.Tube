@@ -105,6 +105,13 @@ public class Player {
         return new VolumeSetting((int)(volume * 1000), 1000);
     }
 
+    PlaybackPosition getPosition() {
+        if (this.mediaPlayer != null)
+            return new PlaybackPosition(this.mediaPlayer.getCurrentPosition(), this.mediaPlayer.getDuration());
+        else
+            return null;
+    }
+
     private void onVideoReady(MediaPlayer mediaPlayer) {
         this.mediaPlayer = mediaPlayer;
         mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);

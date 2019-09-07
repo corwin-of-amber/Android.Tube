@@ -220,6 +220,8 @@ public class MainActivity extends Activity {
                 return asset(path);
             else if (path.startsWith("/vol"))
                 return vol(session);
+            else if (path.startsWith("/pos"))
+                return pos(session);
             else if (path.equals("/pause"))
                 return pause();
             else if (path.equals("/resume"))
@@ -264,6 +266,10 @@ public class MainActivity extends Activity {
             }
         }
 
+        private Response pos(IHTTPSession session) {
+            return newFixedLengthResponse("" + player.getPosition());
+        }
+
         private Response ok() {
             return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
         }
@@ -301,10 +307,7 @@ public class MainActivity extends Activity {
                         }
                         else {
                             webView.evaluateJavascript("onmessage({data: '" + quote(msg) + "'})",
-                                    new ValueCallback<String>() {
-                                        @Override
-                                        public void onReceiveValue(String s) {     }
-                                    });
+                                    null);
                         }
                     }
                 });

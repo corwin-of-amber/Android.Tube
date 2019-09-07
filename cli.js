@@ -2,7 +2,7 @@
 
 const http = require('http');
 
-const BASE = new URL('http://10.0.0.11:2224');
+const BASE = new URL('http://10.0.0.8:2224');
 
 function play(url) {
     post({type: 'watch', url: encodeURI(url)});
@@ -14,6 +14,13 @@ function search(query) {
 
 function pause() { get("/pause"); }
 function resume() { get("/resume"); }
+function vol(level, max=100) { 
+    level ? get(`/vol?${level}/${max}`) : get("/vol"); 
+}
+function mvol(level, max=15) { get(`/vol?;${level}/${max}`); }
+function pos(seek) {
+    seek ? get(`/pos?${seek}`) : get("/pos");
+}
 
 function post(data) {
     if (typeof data !== 'string') data = JSON.stringify(data);
@@ -67,6 +74,12 @@ opts.command('resume')
     .action((text) => { resume(); done = true; });
 opts.command('search <text>')
     .action((text) => { search(text); done = true; });
+opts.command('vol [level] [max]')
+    .action((level, max) => { vol(level && Number(level), max && Number(max)); done = true; });
+opts.command('master-vol [level] [max]')
+    .action((level, max) => { mvol(level && Number(level), max && Number(max)); done = true; });
+opts.command('pos [goto]')
+    .action((seek) => { pos(seek); done = true; });
 
 opts.parse(process.argv);
 
