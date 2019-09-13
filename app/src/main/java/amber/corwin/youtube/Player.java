@@ -112,6 +112,10 @@ public class Player {
             return null;
     }
 
+    void setPosition(int seekTo) {
+        this.mediaPlayer.seekTo(seekTo);
+    }
+
     private void onVideoReady(MediaPlayer mediaPlayer) {
         this.mediaPlayer = mediaPlayer;
         mediaPlayer.setWakeMode(context, PowerManager.PARTIAL_WAKE_LOCK);

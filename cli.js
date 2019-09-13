@@ -2,7 +2,7 @@
 
 const http = require('http');
 
-const BASE = new URL('http://10.0.0.8:2224');
+const BASE = new URL('http://10.0.0.11:2224');
 
 function play(url) {
     post({type: 'watch', url: encodeURI(url)});
@@ -78,7 +78,7 @@ opts.command('vol [level] [max]')
     .action((level, max) => { vol(level && Number(level), max && Number(max)); done = true; });
 opts.command('master-vol [level] [max]')
     .action((level, max) => { mvol(level && Number(level), max && Number(max)); done = true; });
-opts.command('pos [goto]')
+opts.command('pos [seek-to]')
     .action((seek) => { pos(seek); done = true; });
 
 opts.parse(process.argv);

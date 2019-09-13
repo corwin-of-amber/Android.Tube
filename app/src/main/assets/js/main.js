@@ -1,21 +1,30 @@
 'use strict';
 
 function watch(urlOrId) {
-    return getWatchUrl(urlOrId).then(function(webm) {
-        if (typeof mainActivity === 'undefined')
-            play(webm.url);
-        else
-            mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
-    });
+    if (typeof server_action !== 'undefined') {
+        server_action({type: 'watch', url: urlOrId}).then(function(status) {
+            console.log(status);
+            if (status !== 'ok') throw new Error(status);
+        });
+    }
+    else {
+        return getWatchUrl(urlOrId).then(function(webm) {
+            if (typeof mainActivity === 'undefined')
+                play(webm.url, webm.type);
+            else
+                mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
+        });
+    }
 }
 
 function getWatchUrl(urlOrId) {
     console.log(urlOrId, ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId));
-    if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId)) return getStream(urlOrId);
+    if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId))
+        return getStream(urlOrId);
     else return Promise.resolve({url: urlOrId, type: 'unknown'});
 }
 
-function getStream(youtubeUrl) {
+function getStream(youtubeUrl, type='audio/') {
     return new Promise(function(resolve, reject) {
         ytdl.getInfo(youtubeUrl, function (err, info) {
             if (err) {
@@ -30,22 +39,20 @@ function getStream(youtubeUrl) {
                     i++;
                     console.log(`format #${i}/${n}: ${format.type}
                         '${format.url}'`);
-                    if (!webm && format.type.startsWith('video/')) webm = format;
+                    if (!webm && format.type.startsWith(type)) webm = format;
                 }
 
-                //webm = info.formats[0];
-
                 if (webm) resolve(webm);
-                else reject(`no video for '${youtubeUrl}'`);
+                else reject(`no stream for '${youtubeUrl}' (${type}*)`);
             }
             else reject(`empty info for '${youtubeUrl}'`);
         });
     });
 }
 
-function play(mediaUrl) {
-    var v = $('<video>').attr('controls', true),
-        b = $('<button>').text("<");
+function play(mediaUrl, mediaType) {
+    console.log(mediaType);
+    var v = $('<audio>').attr('controls', true);
     v.append($('<source>').attr('src', mediaUrl));
     $('#video-area').html(v);
 }

@@ -111,8 +111,9 @@ $(function() {
         data: {curPlaying: undefined, status: 'ready'},
         template: `
             <div id="ui-container" :class="status">
-                <volume-control ref="volume"></volume-control>
-                <search-ui ref="search" @selected="watch" :active="curPlaying"></search-ui>
+                <volume-control ref="volume"/>
+                <control-panel ref="controls"/>
+                <search-ui ref="search" @selected="watch" :active="curPlaying"/>
             </div>
         `,
         methods: {

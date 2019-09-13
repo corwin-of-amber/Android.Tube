@@ -267,7 +267,17 @@ public class MainActivity extends Activity {
         }
 
         private Response pos(IHTTPSession session) {
-            return newFixedLengthResponse("" + player.getPosition());
+            String q = session.getQueryParameterString();
+            try {
+                if (q == null || q.equals(""))
+                    return newFixedLengthResponse("" + player.getPosition());
+                else {
+                    player.setPosition(Integer.parseInt(q));
+                    return ok();
+                }
+            } catch (NumberFormatException e) {
+                return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","bad request 'vol?" + q + "'");
+            }
         }
 
         private Response ok() {

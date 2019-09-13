@@ -10,6 +10,9 @@ video:focus {
 body {
     margin: 0;
     padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 #ui-container {
@@ -114,7 +117,7 @@ input[type="range"]:focus {
 }
 
 .pending #search-results .video-snippet.active {
-    animation: blink-animation 1s steps(20, start) infinite;
+    animation: pulse-animation 1s steps(20, start) infinite;
 }
 
 .error #search-results .video-snippet.active {
@@ -129,9 +132,57 @@ input[type="range"]:focus {
     margin-left: .5em;
 }
 
-
-@keyframes blink-animation {
+@keyframes pulse-animation {
   50% {
     background: #8484ff;
   }
+}
+
+.control-panel {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    background: white;
+    border-left: 1px solid rgb(204, 191, 191);
+    border-top: 1px solid #ccc;    
+    padding: 2px 0 0 9px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.control-panel .controls {
+    padding: 5px;
+}
+
+.control-panel:not(.expand) {
+    padding: 0;
+    border: none;
+}
+
+.control-panel:not(.expand) .controls {
+    display: none;
+}
+
+.control-panel > button {
+    border: none;
+    background: #eee;
+    padding: 0 7px 2px 5px;
+    font-size: 20px;
+}
+
+.control-panel.expand > button {
+    color: #eee;
+    background: #888;
+}
+
+button:active, button:focus {
+    outline: none;
+}
+
+button[name="play-pause"] {
+    border: none;
+    font-size: 20px;
+    letter-spacing: 2px;
+    padding: 0;
+    min-width: 20px;    
 }
