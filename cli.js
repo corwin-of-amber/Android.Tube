@@ -49,7 +49,7 @@ function get(path) {
     var req = http.request({
         hostname: BASE.hostname, port: Number(BASE.port || 80),
         path: path,
-        method: 'GET'
+        method: path.includes('?') ? 'POST' : 'GET'
     }, (res) => {
          res.pipe(process.stdout);
      });

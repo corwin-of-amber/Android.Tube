@@ -1,5 +1,11 @@
 'use strict';
 
+
+var DEFAULT_MEDIA_TYPE = 
+    (typeof mainActivity !== 'undefined' || typeof server_action !== 'undefined')
+        ? 'video/' : 'audio/';
+
+
 function watch(urlOrId) {
     if (typeof server_action !== 'undefined') {
         server_action({type: 'watch', url: urlOrId}).then(function(status) {
@@ -24,7 +30,7 @@ function getWatchUrl(urlOrId) {
     else return Promise.resolve({url: urlOrId, type: 'unknown'});
 }
 
-function getStream(youtubeUrl, type='audio/') {
+function getStream(youtubeUrl, type=DEFAULT_MEDIA_TYPE) {
     return new Promise(function(resolve, reject) {
         ytdl.getInfo(youtubeUrl, function (err, info) {
             if (err) {
@@ -83,7 +89,7 @@ function action(cmd) {
         action(cmd.inner).then(function(res) {
             mainActivity.postResponse(id, res ? JSON.stringify(res) : "ok");
         })
-        .catch(function(e) { mainActivity.postResponse(id, "error: " + e); });
+        .catch(function(e) { mainActivity.postResponse(id, JSON.stringify({error: e, msg: e.toString()})); });
         break;
     default:
         var errmsg = "unknown command '" + cmd.type + "'";

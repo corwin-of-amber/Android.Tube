@@ -1,16 +1,22 @@
 
 /* yapi proxy */
 
+var SERVER = ""
+var JSON_CT = 'text/json; charset=utf-8'
+
 function server_action(cmd, responseType='text') {
     console.log(cmd);
 
     if (typeof cmd === 'string') {
-        return $.get({url: `/${cmd}`});
+        if (cmd.includes('?'))
+            return $.post({url: `${SERVER}/${cmd}`});
+        else
+            return $.get({url: `${SERVER}/${cmd}`});
     }
         
-    var url = "/";
+    var url = `${SERVER}/`;
     return new Promise(function(resolve, reject) {
-        $.post({url: url, data: JSON.stringify(cmd), contentType: 'text/json', dataType: responseType})
+        $.post({url: url, data: JSON.stringify(cmd), contentType: JSON_CT, dataType: responseType})
         .done(function(data) { console.log('ok', data); resolve(data); })
         .fail(function(jq, status, err) { console.error(jq, status, err);
             reject(jq.responseJSON || jq.response);
@@ -18,10 +24,12 @@ function server_action(cmd, responseType='text') {
     });
 }
 
-yapi = server_action;
+if (typeof yapi === 'undefined') {
+    yapi = server_action;
 
-yapi.search = (query) => server_action({type: 'search', text: query}, responseType='json');
-yapi.details = (videoId) => server_action({type: 'details', videoId}, responseType='json');
+    yapi.search = (query) => server_action({type: 'search', text: query}, responseType='json');
+    yapi.details = (videoId) => server_action({type: 'details', videoId}, responseType='json');
+}
 
 // overrides global :/
 async function watch(url) {

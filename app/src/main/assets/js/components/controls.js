@@ -58,7 +58,7 @@ Vue.component('play-pause-button', {
     },
     methods: {
         toggle() {
-            if (this.playing ? controls.pause() : controls.play())
+            if (this.playing ? controls.pause() : controls.resume())
                 this.playing = !this.playing;
         }
     }
@@ -66,7 +66,7 @@ Vue.component('play-pause-button', {
 
 
 Vue.component('control-panel', {
-    data: function() { return {expand: true}; },
+    data: function() { return {expand: false}; },
     template: `
         <div class="control-panel" :class="{expand}">
             <div class="controls">
@@ -96,6 +96,8 @@ if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
     controls = {
         setVolume(level, max) {
             mainActivity.setVolume(level, max);
+        },
+        getPosition(cb) {
         }
     }
 }
@@ -109,7 +111,13 @@ else if (typeof server_action !== 'undefined') {  /* In client browser */
                 var [p1, p2] = res.split('/');
                 cb({pos: Number(p1), total: Number(p2)});
             });
-        }
+        },
+        seek(pos) {
+            if (pos)
+                server_action(`pos?${pos}`);
+        },
+        resume() { server_action('resume'); return true; },
+        pause() { server_action('pause'); return true; }
     };
 }
 else {                                     /* In NWjs standalone app */
@@ -123,7 +131,7 @@ else {                                     /* In NWjs standalone app */
         seek(pos) {
             if (a = $('audio')[0]) a.currentTime = pos / 1000;
         },
-        play() {
+        resume() {
             if (a = $('audio')[0]) a.play();
             return !!a;
         },

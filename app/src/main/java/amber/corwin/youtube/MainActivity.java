@@ -247,17 +247,20 @@ public class MainActivity extends Activity {
         private Response resume() { player.resume(); return ok(); }
 
         private Response vol(IHTTPSession session) {
+            Method method = session.getMethod();
             String q = session.getQueryParameterString();
             try {
-                if (q == null || q.equals(""))
+                if (method == Method.GET)
                     return newFixedLengthResponse("" + player.getVolume() + ";" + getVolume());
                 else {
-                    String[] volumes = q.split(";");
-                    if (volumes.length >= 1 && volumes[0].length() > 0) {
-                        player.setVolume(VolumeSetting.parse(volumes[0]));
-                    }
-                    if (volumes.length >= 2 && volumes[1].length() > 0) {
-                        setVolume(VolumeSetting.parse(volumes[1]));
+                    if (q != null) {
+                        String[] volumes = q.split(";");
+                        if (volumes.length >= 1 && volumes[0].length() > 0) {
+                            player.setVolume(VolumeSetting.parse(volumes[0]));
+                        }
+                        if (volumes.length >= 2 && volumes[1].length() > 0) {
+                            setVolume(VolumeSetting.parse(volumes[1]));
+                        }
                     }
                     return ok();
                 }
@@ -267,12 +270,14 @@ public class MainActivity extends Activity {
         }
 
         private Response pos(IHTTPSession session) {
+            Method method = session.getMethod();
             String q = session.getQueryParameterString();
             try {
-                if (q == null || q.equals(""))
+                if (method == Method.GET)
                     return newFixedLengthResponse("" + player.getPosition());
                 else {
-                    player.setPosition(Integer.parseInt(q));
+                    if (q != null)
+                        player.setPosition(Integer.parseInt(q));
                     return ok();
                 }
             } catch (NumberFormatException e) {

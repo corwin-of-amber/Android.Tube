@@ -1,20 +1,13 @@
 
-
-
-function jsonCmd(msg) {
-    var cmd = JSON.parse(msg);
-    switch (cmd.type) {
-    case 'search':   return yapi.search(cmd.text);
-    case 'details':  return yapi.details(cmd.videoId);
-    case 'watch':    return getStream(cmd.youtubeUrl);
-    }
-}
-
-
 const fs = require('fs'), http = require('http'), concat = require('concat-stream');
 
+
+
+/**
+ * A JS clone of the server from MainActivity (for testing).
+ */
 class Server {
-    constructor(port=8005) {
+    constructor(port=2224) {
         this.port = port;
 
         this.server = http.createServer();
@@ -27,18 +20,31 @@ class Server {
 
     handle(request, response) {
         console.log(request);
+        var serveStatic = (filename) => {
+            console.log(filename);
+            fs.createReadStream(filename).on('error', console.error)
+            .pipe(response);
+        };
         try {
-            if (request.method === 'GET' && request.url === '/') {
-                fs.createReadStream('app/src/main/assets/html/client.html').pipe(response);
+            var [path, q] = request.url.split('?')
+            if (request.method === 'GET' && path === '/') {
+                serveStatic('app/src/main/assets/html/app.html');
+            }
+            else if (request.method === 'GET' && path === '/js/yapi.js') {
+                serveStatic('app/src/main/assets/js/client.js');
             }
             else if (request.method === 'GET' && 
-                ['/node_modules/', '/app/'].some(p => request.url.startsWith(p))) {
-                fs.createReadStream(request.url.substring(1)).pipe(response);
+                ['/js/', '/css/'].some(p => request.url.startsWith(p))) {
+                serveStatic('app/src/main/assets' + request.url);
             }
+            else if (path === '/resume') { controls.resume(); response.end(); }
+            else if (path === '/pause')  { controls.pause(); response.end(); }
+            else if (path === '/vol')    { response.end(); }
             else if (request.method === 'POST') {
                 request.pipe(concat(async (msg) => {
-                    var c = await jsonCmd(msg);
-                    response.write(JSON.stringify(c));
+                    console.log(msg);
+                    var c = await action(JSON.parse(msg));
+                    response.write(c ? JSON.stringify(c) : "ok");
                     response.end();
                 }));
             }
