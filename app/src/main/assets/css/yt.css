@@ -19,8 +19,8 @@ body {
     box-sizing: border-box;
     direction: rtl;
     height: 100%;
-    padding: 9px;
     overflow: auto;
+    box-sizing: border-box;
 }
 
 #ui-container > * {
@@ -35,6 +35,14 @@ body {
     height: 30px;
 }
 
+div.search-ui {
+    padding: 9px;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+}
+
 input.volume-control {
     -webkit-appearance: none;
     transform: rotate(270deg);
@@ -43,19 +51,19 @@ input.volume-control {
 
 input.volume-control::-webkit-slider-runnable-track {
     background: linear-gradient(to top left,
-        #ddd 0%, #ddd 50%, #fff 50%, #fff 100%);
+        #a7b2ce 0%, #a7b2ce 50%, #fff 51%, #fff 100%);
     height: 20px;
     border: none;
 }
 
 input.volume-control::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 10px;
-    height: 25px;
-    background: white;
-    border: 2px solid black;
-    border-radius: 23px;
-    margin-top: -2px;
+    width: 50px;
+    height: 30px;
+    background: linear-gradient(to right,
+        #fff0 0%, #fff0 30%, #999 30%, #ddd 40%, #ddd 48%, #888 50%, #ddd 52%, #ddd 60%, #eee 70%, #fff0 70%, #fff0 100%);
+    margin-top: -7px;
+    border: none;
 }
 
 input[type="range"]:focus {
@@ -181,6 +189,7 @@ button:active, button:focus {
 
 button[name="play-pause"] {
     border: none;
+    background: none;
     font-size: 20px;
     letter-spacing: 2px;
     padding: 0;

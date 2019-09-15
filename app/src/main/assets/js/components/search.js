@@ -39,14 +39,20 @@ Vue.component('video-snippet', {
             const self = this;
             yapi.details(this.item.id.videoId).then(function(res) {
                 self.duration = res.duration;
-            });
+            })
+            .catch(function(e) { console.error(e); self.duration = -1; })
         },
         timestamp(pt) {
-            var mo = pt.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            var h = mo[1], m = mo[2] || '0', s = mo[3] || '0';
+            if (pt === -1) return "--:--";
 
-            return [h, m, s].filter(function(x) { return x; })
-                .map(function(x) {return x.padStart(2, '0'); }).join(':');
+            var mo = pt.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (mo) {
+                var h = mo[1], m = mo[2] || '0', s = mo[3] || '0';
+
+                return [h, m, s].filter(function(x) { return x; })
+                    .map(function(x) {return x.padStart(2, '0'); }).join(':');
+            }
+            else return "--:--";
         }
     }
 });
@@ -86,7 +92,7 @@ Vue.component('search-ui', {
         }
     },
     template: `
-        <div>
+        <div class="search-ui">
             <div id="search-box">
                 <input v-model="searchQuery" @keydown.enter="blur()">
                 <search-button/>
@@ -130,3 +136,12 @@ $(function() {
         }
     });
 });
+
+// Prevents window from moving on touch on newer browsers.
+window.addEventListener('touchmove', function (event) {
+    if ($(event.target).closest('.search-ui').length === 0 &&
+        event.target.className !== 'volume-control')
+        event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+}, {passive: false});
