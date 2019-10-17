@@ -12,7 +12,7 @@ if (!String.prototype.padStart)
 
 Vue.component('search-button', {
     template: `
-    <button>
+    <button @click="$emit('click')">
         <svg viewBox="0 0 24 24" focusable="false" style="pointer-events: none;"><g>
             <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" class="style-scope yt-icon"></path>
         </g></svg>
@@ -28,7 +28,8 @@ Vue.component('video-snippet', {
         item() { this.fetchDetails(); }
     },
     template: `
-        <p class="video-snippet" :class="{active: active}" @click="$emit('click')">
+        <p class="video-snippet" :class="{active: active}" @click="$emit('click')"
+                draggable="true" @dragstart="dragStart">
             <span class="title" v-html="item.snippet.title"/>
             <span class="duration" v-if="duration">{{timestamp(duration)}}</span>
         </p>
@@ -53,6 +54,23 @@ Vue.component('video-snippet', {
                     .map(function(x) {return x.padStart(2, '0'); }).join(':');
             }
             else return "--:--";
+        },
+        dragStart(ev) {
+            ev.dataTransfer.setData("json", JSON.stringify(this.item));
+        },
+        swipeStart(ev) {
+            ev.preventDefault();
+            this._swipe = {x: ev.offsetX, y: ev.offsetY};
+        },
+        swipeEnd(ev) {
+            if (this._swipe) {
+                var box = this.$el.getBoundingClientRect();
+                if (Math.abs(ev.offsetY - this._swipe.y) < box.height &&
+                    Math.abs(ev.offsetX - this._swipe.x) > box.width / 2) {
+                    console.log('swipe', this.item);
+                    this.$emit('swipe', this.item);
+                }
+            }
         }
     }
 });
@@ -63,6 +81,22 @@ Vue.component('search-ui', {
         searchQuery: '',
         searchResults: []
     }; },
+    template: `
+        <div class="search-ui">
+            <div id="search-box">
+                <input ref="query" v-model="searchQuery" @keydown.enter="blur()">
+                <search-button @click="selectAll"/>
+            </div>
+            <div id="search-results">
+                <template v-for="item in searchResults">
+                    <video-snippet v-if="item.id.kind === 'youtube#video'"
+                        :item="item" :active="item.id.videoId === active"
+                        @click="$emit('selected', item)"
+                        @swipe="$emit('swipe', item)"/>
+                </template>
+            </div>
+        </div>
+    `,    
     created() {
         this.performSearch = _.debounce(this._performSearch, 500);
     },
@@ -83,6 +117,9 @@ Vue.component('search-ui', {
         },
         blur() {
             $(this.$el).find('input').blur();
+        },
+        selectAll() {
+            this.$refs.query.select();
         }
     },
     watch: {
@@ -90,22 +127,7 @@ Vue.component('search-ui', {
             if (newValue.length > 2)
                 this.performSearch(newValue);
         }
-    },
-    template: `
-        <div class="search-ui">
-            <div id="search-box">
-                <input v-model="searchQuery" @keydown.enter="blur()">
-                <search-button/>
-            </div>
-            <div id="search-results">
-                <template v-for="item in searchResults">
-                    <video-snippet v-if="item.id.kind === 'youtube#video'"
-                        :item="item" :active="item.id.videoId === active"
-                        @click="$emit('selected', item)"/>
-                </template>
-            </div>
-        </div>
-    `
+    }
 });
 
 
@@ -114,12 +136,14 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
-        data: {curPlaying: undefined, status: 'ready'},
+        data: {curPlaying: undefined, playlist: undefined, status: 'ready'},
         template: `
             <div id="ui-container" :class="status">
                 <volume-control ref="volume"/>
                 <control-panel ref="controls"/>
                 <search-ui ref="search" @selected="watch" :active="curPlaying"/>
+                <playlist-ui v-if="playlist" ref="playlist" :name="playlist.name"
+                    @selected="watch" :active="curPlaying"/>
             </div>
         `,
         methods: {
@@ -132,6 +156,9 @@ $(function() {
                 watch(this.curPlaying = item.id.videoId)
                 .catch(function() { self.status = 'error'; })
                 .then(function() { self.status = 'playing'; });
+            },
+            addToPlaylist(item) {
+                this.$refs.playlist.items.push(item);
             }
         }
     });

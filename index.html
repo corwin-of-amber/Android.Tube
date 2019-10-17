@@ -10,8 +10,10 @@
         <script src="app/src/main/assets/js/main.js"></script>
         <script src="app/src/main/assets/js/yapi.js"></script>
         <script src="app/src/main/assets/js/server.js"></script>
+        <!-- <script src="app/src/main/assets/js/client.js"></script> -->
         <script src="app/src/main/assets/js/components/search.js"></script>
         <script src="app/src/main/assets/js/components/controls.js"></script>
+        <script src="app/src/main/assets/js/components/playlist.js"></script>
 
         <link rel="stylesheet" type="text/css" href="app/src/main/assets/css/yt.css">
     </head>
@@ -21,5 +23,9 @@
         </div>
     </body>
 
-    <script>$(() => app.$refs.search.search("bangles"));</script>
+    <script>SERVER = 'http://10.0.0.11:2224';</script>
+    <script>$(() => {
+        app.$refs.search.search("bangles");
+        app.playlist = {name: "Default Playlist", items: []};
+    });</script>
 </html>
