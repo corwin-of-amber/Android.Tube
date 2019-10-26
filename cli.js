@@ -5,7 +5,11 @@ const http = require('http');
 var BASE = new URL('http://10.0.0.11:2224');
 
 function play(url) {
-    post({type: 'watch', url: encodeURI(url)});
+    post('/', {type: 'watch', url: encodeURI(url)});
+}
+
+function playlist(filename) {
+    post('/playlist', {tracks: readTracks(filename)});
 }
 
 function search(query) {
@@ -22,12 +26,12 @@ function pos(seek) {
     seek ? get(`/pos?${seek}`) : get("/pos");
 }
 
-function post(data) {
+function post(path, data) {
     if (typeof data !== 'string') data = JSON.stringify(data);
 
     var req = http.request({
         hostname: BASE.hostname, port: Number(BASE.port || 80),
-        path: '/',
+        path: path,
         method: 'POST',
         headers: {
             'Content-Type': 'text/json',
@@ -61,6 +65,16 @@ function get(path) {
     req.end();
 }
 
+function readTracks(filename) {
+    const fs = require('fs');
+    var lines = fs.readFileSync(filename, 'utf-8').split(/\n/)
+        .filter(ln => !/^\s*$/.exec(ln));
+    
+    return lines.map((uri, index) => (
+        {id: index, uri, kind: 2}
+    ));
+}
+
 
 var opts = require('commander'), done;
 
@@ -69,6 +83,8 @@ opts.option('-s,--server <url>', 'server url')
 
 opts.command('play <url>')
     .action((url) => { play(url); done = true; });
+opts.command('playlist <filename>')
+    .action((filename) => { playlist(filename); done = true; })
 opts.command('stop')
     .action((text) => { pause(); done = true; });
 opts.command('pause')

@@ -8,7 +8,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
-import android.util.SparseArray;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebMessage;
 import android.webkit.WebResourceRequest;
@@ -17,14 +16,14 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import org.json.JSONException;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.CharBuffer;
+import java.util.Map;
+import java.util.TreeMap;
 
 import amber.corwin.youtube.server.HTTPD;
 
@@ -67,11 +66,11 @@ public class MainActivity extends Activity {
         //player.attach((VideoView) findViewById(R.id.video));
         player.setUriHandler(new Player.UriHandler() {
             @Override
-            public void resolveTrack(final Playlist.Track track, Callback callback) {
-                runOnUiThread(new Runnable() {
+            public void resolveTrack(final Playlist.Track track, final Callback callback) {
+                requestStream(track.uri, new OnReceivedUrl() {
                     @Override
-                    public void run() {
-                        jsCall("{\"type\": \"watch\", \"url\": \"" + track.uri + "\"}");
+                    public void receivedUrl(String watchUrl, String type, String mediaUrl) {
+                        callback.resolved(Uri.parse(mediaUrl));
                     }
                 });
             }
@@ -160,13 +159,22 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ---------------
+    // JS Interop Part
+    // ---------------
+
     class JsInterface {
         @JavascriptInterface
-        public void receivedUrl(String watchUrl, String type, final String mediaUrl) {
-            Log.i(TAG, type);
-            Log.i(TAG, mediaUrl);
+        public void receivedUrl(String watchUrl, String type, String mediaUrl) {
+            Log.i(TAG, mediaUrl + "  (" + type + ")");
 
-            player.playMedia(Uri.parse(mediaUrl));
+            OnReceivedUrl cont = pendingCalls.get(watchUrl);
+            if (cont != null) {
+                cont.receivedUrl(watchUrl, type, mediaUrl);     // initiated by requestStream
+                pendingCalls.remove(watchUrl);
+            }
+            else
+                player.playMedia(Uri.parse(mediaUrl));          // initiated by JS
         }
         @JavascriptInterface
         public void setVolume(int level, int max) {
@@ -187,6 +195,27 @@ public class MainActivity extends Activity {
                     null);
         }
     }
+
+    void requestStream(Uri youtubeUrl, OnReceivedUrl callback) {
+        requestStream(youtubeUrl.toString(), callback);
+    }
+
+    void requestStream(final String youtubeUrl, OnReceivedUrl callback) {
+        if (callback != null)
+            pendingCalls.put(youtubeUrl, callback);
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                jsCall("{\"type\": \"watch\", \"url\": \"" + youtubeUrl + "\"}");
+            }
+        });
+    }
+
+    interface OnReceivedUrl {
+        void receivedUrl(String watchUrl, String type, String mediaUrl);
+    }
+    private Map<String, OnReceivedUrl> pendingCalls = new TreeMap<>();
 
     private String quote(String s) {
         return s.replace("\\", "\\\\").replace("'", "\\'");
