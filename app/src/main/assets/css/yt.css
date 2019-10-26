@@ -231,3 +231,13 @@ button[name="play-pause"] {
 .playlist-ui .playlist-item .video-snippet {
     flex-grow: 1;
 }
+
+.playlist-ui.drag-over {
+    background: #eef;
+}
+
+.playlist-ui.drag-over h1 {
+    background: white;
+    margin-top: 0;
+    padding-top: 25px;
+}

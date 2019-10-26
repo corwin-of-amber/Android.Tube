@@ -136,17 +136,20 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
-        data: {curPlaying: undefined, playlist: {}, status: 'ready'},
+        data: {curPlaying: undefined, playlist: undefined, status: 'ready'},
         template: `
-            <div id="ui-container" :class="status">
+            <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
                 <volume-control ref="volume"/>
                 <control-panel ref="controls" :playlist="playlist"/>
                 <search-ui ref="search" @selected="watch" :active="curPlaying"/>
                 <playlist-ui v-if="playlist && playlist.show"
-                    ref="playlist" :name="playlist.name"
+                    ref="playlist" :playlist="playlist"
                     @selected="watch" :active="curPlaying"/>
             </div>
         `,
+        mounted() {
+            this.playlist = Playlist.restore();
+        },
         methods: {
             search(query) {
                 return this.$refs.search.search(query);
@@ -158,8 +161,11 @@ $(function() {
                 .catch(function() { self.status = 'error'; })
                 .then(function() { self.status = 'playing'; });
             },
-            addToPlaylist(item) {
-                this.$refs.playlist.items.push(item);
+
+            dragOver(ev) { ev.preventDefault(); },
+            drop(ev) {
+                if (this.$refs.playlist)
+                    this.$refs.playlist.dropAway(ev);
             }
         }
     });

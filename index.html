@@ -26,6 +26,6 @@
     <script>SERVER = 'http://10.0.0.11:2224';</script>
     <script>$(() => {
         app.$refs.search.search("bangles");
-        app.playlist = {name: "Default Playlist", items: []};
+        app.$set(app.playlist, 'show', true);
     });</script>
 </html>
