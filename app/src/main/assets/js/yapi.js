@@ -1,12 +1,16 @@
 'use strict';
 
 
-const key = 'AIzaSyAa8yy0GdcGPHdtD083HiGGx_S0vMPScDM',
-      api_endpoint = 'https://content.googleapis.com/youtube/v3',
+const api_key = 'AIzaSyCXd3M-Cb0KvyBMKTNS23nfaoiez6l51Go',
+      api_origin = 'https://developers.google.com';
+/*
+const api_key = 'AIzaSyAa8yy0GdcGPHdtD083HiGGx_S0vMPScDM',
       api_origin = 'https://explorer.apis.google.com';
+*/
+const api_endpoint = 'https://content.googleapis.com/youtube/v3';
 
 function yapi(action, params) {
-    var url=`${api_endpoint}/${action}?${$.param(params)}&key=${key}`;
+    var url=`${api_endpoint}/${action}?${$.param(params)}&key=${api_key}`;
     return new Promise(function(resolve, reject) {
         $.getJSON({url: url, headers: {'X-Origin': api_origin}})
         .done(function(data) { resolve(data); })

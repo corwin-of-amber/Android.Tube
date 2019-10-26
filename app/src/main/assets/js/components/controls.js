@@ -108,8 +108,8 @@ else if (typeof server_action !== 'undefined') {  /* In client browser */
         },
         getPosition(cb) {
             server_action('pos').then(function(res) {
-                var [p1, p2] = res.split('/');
-                cb({pos: Number(p1), total: Number(p2)});
+                var pos_total = res.split('/');
+                cb({pos: Number(pos_total[0]), total: Number(pos_total[1])});
             });
         },
         seek(pos) {

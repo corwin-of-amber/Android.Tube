@@ -2,51 +2,42 @@ package amber.corwin.youtube;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.icu.util.Output;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
 import android.util.SparseArray;
-import android.view.View;
-import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
-import android.webkit.ValueCallback;
 import android.webkit.WebMessage;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.LinearLayout;
-import android.widget.MediaController;
-import android.widget.VideoView;
+
+import org.json.JSONException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.io.Reader;
 import java.nio.CharBuffer;
-import java.util.HashMap;
-import java.util.Map;
 
-import fi.iki.elonen.NanoHTTPD;
+import amber.corwin.youtube.server.HTTPD;
+
+
 
 public class MainActivity extends Activity {
 
     private static final String TAG = "Android.Tube";
 
     private WebView webView;
-    private Player player;
+    public Player player;   // expose to HTTPD
 
-    private Server httpd;
+    private HTTPD httpd;
 
     private PowerManager.WakeLock wakeLock;
 
@@ -74,6 +65,17 @@ public class MainActivity extends Activity {
 
         player = new Player(this);
         //player.attach((VideoView) findViewById(R.id.video));
+        player.setUriHandler(new Player.UriHandler() {
+            @Override
+            public void resolveTrack(final Playlist.Track track, Callback callback) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        jsCall("{\"type\": \"watch\", \"url\": \"" + track.uri + "\"}");
+                    }
+                });
+            }
+        });
 
         webView = findViewById(R.id.webview);
 
@@ -131,7 +133,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    InputStream openAsset(String path) {
+    public InputStream openAsset(String path) {
         if (path.startsWith("/")) path = path.substring(1);
         try {
             return getAssets().open(path);
@@ -176,6 +178,20 @@ public class MainActivity extends Activity {
         }
     }
 
+    public void jsCall(String json) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            webView.postWebMessage(new WebMessage(json), Uri.EMPTY);
+        }
+        else {
+            webView.evaluateJavascript("onmessage({data: '" + quote(json) + "'})",
+                    null);
+        }
+    }
+
+    private String quote(String s) {
+        return s.replace("\\", "\\\\").replace("'", "\\'");
+    }
+
     // -----------------
     // AudioManager Part
     // -----------------
@@ -187,11 +203,11 @@ public class MainActivity extends Activity {
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, level * volMax / max, 0);
     }
 
-    void setVolume(VolumeSetting vol) {
+    public void setVolume(VolumeSetting vol) {
         setVolume(vol.level, vol.max);
     }
 
-    VolumeSetting getVolume() {
+    public VolumeSetting getVolume() {
         return new VolumeSetting(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC),
                                  audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
     }
@@ -200,166 +216,9 @@ public class MainActivity extends Activity {
     // Server Part
     // -----------
 
-    class Server extends NanoHTTPD {
-
-        private int nextReqId = 3;
-        SparseArray<OutputStream> pendingRequests = new SparseArray<>();
-
-        Server() { super(2224); }
-
-        @Override
-        public Response serve(IHTTPSession session) {
-            Method method = session.getMethod();
-            String path = session.getUri();
-
-            if (path.equals("/") && method == Method.GET)
-                return index();
-            else if (path.equals("/js/yapi.js"))
-                return asset("/js/client.js");
-            else if (path.startsWith("/js/") || path.startsWith("/css/"))
-                return asset(path);
-            else if (path.startsWith("/vol"))
-                return vol(session);
-            else if (path.startsWith("/pos"))
-                return pos(session);
-            else if (path.equals("/pause"))
-                return pause();
-            else if (path.equals("/resume"))
-                return resume();
-            else if (method == Method.POST)
-                return handlePost(session);
-            else
-                return super.serve(session);
-        }
-
-        private Response index() {
-            return newChunkedResponse(Response.Status.OK, "text/html",
-                    openAsset("/html/app.html"));
-        }
-
-        private Response asset(String path) {
-            return newChunkedResponse(Response.Status.OK, "text/javascript",
-                    openAsset(path));
-        }
-
-        private Response pause() { player.pause(); return ok(); }
-
-        private Response resume() { player.resume(); return ok(); }
-
-        private Response vol(IHTTPSession session) {
-            Method method = session.getMethod();
-            String q = session.getQueryParameterString();
-            try {
-                if (method == Method.GET)
-                    return newFixedLengthResponse("" + player.getVolume() + ";" + getVolume());
-                else {
-                    if (q != null) {
-                        String[] volumes = q.split(";");
-                        if (volumes.length >= 1 && volumes[0].length() > 0) {
-                            player.setVolume(VolumeSetting.parse(volumes[0]));
-                        }
-                        if (volumes.length >= 2 && volumes[1].length() > 0) {
-                            setVolume(VolumeSetting.parse(volumes[1]));
-                        }
-                    }
-                    return ok();
-                }
-            } catch (NumberFormatException e) {
-                return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","bad request 'vol?" + q + "'");
-            }
-        }
-
-        private Response pos(IHTTPSession session) {
-            Method method = session.getMethod();
-            String q = session.getQueryParameterString();
-            try {
-                if (method == Method.GET)
-                    return newFixedLengthResponse("" + player.getPosition());
-                else {
-                    if (q != null)
-                        player.setPosition(Integer.parseInt(q));
-                    return ok();
-                }
-            } catch (NumberFormatException e) {
-                return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","bad request 'vol?" + q + "'");
-            }
-        }
-
-        private Response ok() {
-            return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
-        }
-
-        Response handlePost(IHTTPSession session) {
-            Map<String, String> files = new HashMap<String, String>();
-            try {
-                session.parseBody(files);
-            }
-            catch (IOException e) { Log.e(TAG, "serve: read error", e); }
-            catch (ResponseException e) { Log.e(TAG, "serve: bad response", e); }
-
-            String postData = files.get("postData");
-
-            if (postData == null) {
-                return super.serve(session);
-            }
-
-            int id = nextReqId++;
-
-            final String msg = "{\"type\": \"request\", \"id\": " + id + ", \"inner\": " + postData + "}";
-
-            PipedInputStream data = new PipedInputStream();
-            PipedOutputStream pipe = new PipedOutputStream();
-            try {
-                pipe.connect(data);
-                synchronized (this) {
-                    pendingRequests.put(id, pipe);
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            webView.postWebMessage(new WebMessage(msg), Uri.EMPTY);
-                        }
-                        else {
-                            webView.evaluateJavascript("onmessage({data: '" + quote(msg) + "'})",
-                                    null);
-                        }
-                    }
-                });
-                return newChunkedResponse(Response.Status.OK, "text/json", data);
-            }
-            catch (IOException e) {
-                Log.e(TAG, "Server.serve", e);
-                return super.serve(session);
-            }
-        }
-
-        void postResponse(int id, String resp) {
-            OutputStream pipe;
-            synchronized (this) {
-                pipe = this.pendingRequests.get(id);
-            }
-            if (pipe != null) {
-                try {
-                    pipe.write(resp.getBytes());
-                    pipe.close();
-                }
-                catch (IOException e) {
-                    Log.w(TAG, "response is lost", e);
-                }
-                finally {
-                    this.pendingRequests.remove(id);
-                }
-            }
-        }
-
-        private String quote(String s) {
-            return s.replace("\\", "\\\\").replace("'", "\\'");
-        }
-    }
 
     void startServer() {
-        httpd = new Server();
+        httpd = new HTTPD(this);
         try {
             httpd.start();
         }

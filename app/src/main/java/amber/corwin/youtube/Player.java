@@ -27,8 +27,16 @@ public class Player {
 
     private float volume = 1.0f;
 
+    private Playlist playlist;
+
+    private UriHandler uriHandler = null;
+
     Player(Activity context) {
         this.context = context;
+    }
+
+    void setUriHandler(UriHandler handler) {
+        uriHandler = handler;
     }
 
     void attach(VideoView video) {
@@ -79,40 +87,80 @@ public class Player {
         }
     }
 
-    void pause() {
+    void playTrack(final Playlist.Track track) {
+        if (track.kind != null && uriHandler != null)
+            uriHandler.resolveTrack(track, new UriHandler.Callback() {
+                @Override
+                public void resolved(Uri uri) {
+                    playTrack(track, uri);
+                }
+            });
+        else
+            playTrack(track, track.uri);
+    }
+
+    void playTrack(Playlist.Track track, Uri uri) {
+        playMedia(uri);
+
+        if (mediaPlayer != null) {
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mediaPlayer) {
+                    if (Player.this.mediaPlayer == mediaPlayer) {
+                        playNext();
+                    }
+                }
+            });
+        }
+    }
+
+    public void playFromList(Playlist playlist) {
+        this.playlist = playlist;
+        playTrack(playlist.current());
+    }
+
+    void playNext() {
+        if (this.playlist != null) {
+            Playlist.Track track = playlist.next();
+            if (track != null)
+                playTrack(track);
+        }
+    }
+
+    public void pause() {
         if (mediaPlayer != null && mediaPlayer.isPlaying()) mediaPlayer.pause();
     }
 
-    void resume() {
+    public void resume() {
         if (mediaPlayer != null && !mediaPlayer.isPlaying()) mediaPlayer.start();
     }
 
-    void setVolume(int level, int max) {
+    public void setVolume(int level, int max) {
         setVolume((float)level / max);
     }
 
-    void setVolume(float volume){
+    public void setVolume(float volume){
         this.volume = volume;
         if (mediaPlayer != null)
             mediaPlayer.setVolume(volume, volume);
     }
 
-    void setVolume(VolumeSetting vol) {
+    public void setVolume(VolumeSetting vol) {
         setVolume(vol.level, vol.max);
     }
 
-    VolumeSetting getVolume() {
+    public VolumeSetting getVolume() {
         return new VolumeSetting((int)(volume * 1000), 1000);
     }
 
-    PlaybackPosition getPosition() {
+    public PlaybackPosition getPosition() {
         if (this.mediaPlayer != null)
             return new PlaybackPosition(this.mediaPlayer.getCurrentPosition(), this.mediaPlayer.getDuration());
         else
             return null;
     }
 
-    void setPosition(int seekTo) {
+    public void setPosition(int seekTo) {
         this.mediaPlayer.seekTo(seekTo);
     }
 
@@ -138,6 +186,14 @@ public class Player {
         String msg = "Can't play this video" + (err == null ? "" : "(" + err + ")");
 
         Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+    }
+
+    interface UriHandler {
+        void resolveTrack(Playlist.Track track, Callback callback);
+
+        interface Callback {
+            void resolved(Uri uri);
+        }
     }
 
 }

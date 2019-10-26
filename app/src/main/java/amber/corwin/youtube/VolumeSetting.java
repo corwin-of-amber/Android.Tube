@@ -5,14 +5,14 @@ public class VolumeSetting {
     public int level;
     public int max;
 
-    VolumeSetting(int level, int max) { this.level = level; this.max = max; }
+    public VolumeSetting(int level, int max) { this.level = level; this.max = max; }
 
     @Override
     public String toString() {
         return "" + level + "/" + max;
     }
 
-    static VolumeSetting parse(String s) {
+    public static VolumeSetting parse(String s) {
         String[] parts = s.split("/");
         if (parts.length == 2) {
             int level = Integer.parseInt(parts[0]);

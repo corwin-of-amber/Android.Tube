@@ -2,7 +2,7 @@
 
 const http = require('http');
 
-const BASE = new URL('http://10.0.0.11:2224');
+var BASE = new URL('http://10.0.0.11:2224');
 
 function play(url) {
     post({type: 'watch', url: encodeURI(url)});
@@ -63,6 +63,9 @@ function get(path) {
 
 
 var opts = require('commander'), done;
+
+opts.option('-s,--server <url>', 'server url')
+    .on('option:server', x => BASE = new URL(`http://${x}:2224`));
 
 opts.command('play <url>')
     .action((url) => { play(url); done = true; });

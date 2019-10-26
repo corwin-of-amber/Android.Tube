@@ -30,7 +30,8 @@ function getWatchUrl(urlOrId) {
     else return Promise.resolve({url: urlOrId, type: 'unknown'});
 }
 
-function getStream(youtubeUrl, type=DEFAULT_MEDIA_TYPE) {
+function getStream(youtubeUrl, type) {
+    type = type || DEFAULT_MEDIA_TYPE;
     return new Promise(function(resolve, reject) {
         ytdl.getInfo(youtubeUrl, function (err, info) {
             if (err) {
