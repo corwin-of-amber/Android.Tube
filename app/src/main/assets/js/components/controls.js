@@ -65,11 +65,27 @@ Vue.component('play-pause-button', {
 });
 
 
+Vue.component('playlist-button', {
+    props: ['playlist'],
+    template: `
+        <button name="show-playlist" @click="toggle"
+            :class="{on: playlist && playlist.show}">[playlist]</button>
+    `,
+    methods: {
+        toggle() {
+            this.$set(this.playlist, 'show', !this.playlist.show);
+        }
+    }
+});
+
+
 Vue.component('control-panel', {
+    props: ['playlist'],
     data: function() { return {expand: false}; },
     template: `
         <div class="control-panel" :class="{expand}">
             <div class="controls">
+                <playlist-button ref="playlist" :playlist="playlist"/>
                 <play-pause-button ref="playPause"/>
                 <position-bar ref="position"/>
             </div>

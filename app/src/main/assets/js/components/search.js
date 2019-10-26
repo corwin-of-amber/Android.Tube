@@ -136,13 +136,14 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
-        data: {curPlaying: undefined, playlist: undefined, status: 'ready'},
+        data: {curPlaying: undefined, playlist: {}, status: 'ready'},
         template: `
             <div id="ui-container" :class="status">
                 <volume-control ref="volume"/>
-                <control-panel ref="controls"/>
+                <control-panel ref="controls" :playlist="playlist"/>
                 <search-ui ref="search" @selected="watch" :active="curPlaying"/>
-                <playlist-ui v-if="playlist" ref="playlist" :name="playlist.name"
+                <playlist-ui v-if="playlist && playlist.show"
+                    ref="playlist" :name="playlist.name"
                     @selected="watch" :active="curPlaying"/>
             </div>
         `,
