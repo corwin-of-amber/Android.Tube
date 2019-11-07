@@ -8,21 +8,21 @@ Vue.component('playlist-ui', {
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
                 @drop="drop" :class="{['drag-'+dragState]: !!dragState}">
         <h1 contenteditable="true">{{playlist.name}}</h1>
-        <template v-for="item in playlist.items">
-            <div class="playlist-item">
+        <div>
+            <div class="playlist-item" v-for="track in playlist.tracks">
                 <div class="gutter"/>
                 <video-snippet
-                    :item="item" :active="item.id.videoId === active"
-                    @click="$emit('selected', item)"/>
+                    :item="track" :active="track.id.videoId === active"
+                    @click="$emit('selected', track)"/>
             </div>
-        </template>
+        </div>
     </div>
     `,
 
     mounted() {
         this.$watch('playlist', (playlist) => {
-            if (!playlist.items) this.$set(playlist, 'items', []);
-            if (!playlist.id)    this.$set(playlist, 'id', Playlist.mkShortId());
+            if (!playlist.tracks) this.$set(playlist, 'tracks', []);
+            if (!playlist.id)     this.$set(playlist, 'id', Playlist.mkShortId());
         }, {immediate: true});
         this.$watch('playlist', () => this.store(), {deep: true});
     },
@@ -71,25 +71,32 @@ Vue.component('playlist-ui', {
 
 class Playlist {
 
-    constructor(name, items=[]) {
+    constructor(name, tracks=[]) {
         this.name = name;
-        this.items = items;
+        this.tracks = tracks;
     }
 
     add(item) {
         var injectProps = {_playlist: this.id,
                            _playlistItem: Playlist.mkShortId()}
-        this.items.push(Object.assign({}, item, injectProps));
+        this.tracks.push(Object.assign({}, item, injectProps));
     }
 
     remove(item) {
-        var id = JSON.stringify(item.id),
-            index = this.items.findIndex(e => JSON.stringify(e.id) === id);
+        var index = this.indexOf(item);
         if (index >= 0) {
-            this.items.splice(index, 1);
+            this.tracks.splice(index, 1);
             return true;
         }
         else return false;
+    }
+
+    indexOf(item) {
+        var id = JSON.stringify(item.id),
+            itemId = item._playlistItem;
+        return itemId
+                ? this.tracks.findIndex(e => e._playlistItem === itemId)
+                : this.tracks.findIndex(e => JSON.stringify(e.id) === id);
     }
 
     store(key) { Playlist.store(this, key); }
@@ -101,14 +108,30 @@ class Playlist {
     static restore(key='tube.playlist') {
         var stored = localStorage[key],
             pl = Object.assign(new Playlist, stored ? JSON.parse(stored) : {});
-        for (let item of pl.items) {
-            if (!item._playlist)     item._playlist = this.id;
-            if (!item._playlistItem) item._playlistItem = Playlist.mkShortId();
+        for (let track of pl.tracks) {
+            if (!track._playlist)     track._playlist = this.id;
+            if (!track._playlistItem) track._playlistItem = Playlist.mkShortId();
         }
         return pl;
+    }
+
+    /**
+     * Creates a playlist JSON that is suitable for sending to the server.
+     */
+    export(nowPlaying) {
+        if (typeof nowPlaying !== 'number')
+            nowPlaying = this.indexOf(nowPlaying);
+
+        const mkTrack = track => ({
+            id: track.id.videoId, kind: Playlist.KIND.YOUTUBE,
+            uri: track.id.videoId});
+
+        return {tracks: this.tracks.map(mkTrack), nowPlaying};
     }
 
     static mkShortId() {
         return Math.random().toString(36).slice(2);
     }
+
+    static KIND = {YOUTUBE: 2};
 }

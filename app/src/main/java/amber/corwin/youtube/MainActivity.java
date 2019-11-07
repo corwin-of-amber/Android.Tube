@@ -40,20 +40,6 @@ public class MainActivity extends Activity {
 
     private PowerManager.WakeLock wakeLock;
 
-    private static final String HTML =
-            "<html><head>" +
-                    "<script src=\"./js/lib/jquery.min.js\"></script>" +
-                    "<script src=\"./js/lib/lodash.min.js\"></script>" +
-                    "<script src=\"./js/lib/vue.min.js\"></script>" +
-                    "<script src=\"./js/lib/ytdl.browser.js\"></script>" +
-                    "<script src=\"./js/main.js\"></script>" +
-                    "<script src=\"./js/yapi.js\"></script>" +
-                    "<script src=\"./js/components/search.js\"></script>" +
-                    "<script src=\"./js/components/volume.js\"></script>" +
-                    "<link rel=\"stylesheet\" type=\"text/css\" href=\"./css/yt.css\">" +
-                    "</head><body><div id=\"ui-container\"></div>"+
-            "</body></html>";
-
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +73,7 @@ public class MainActivity extends Activity {
         Log.i(TAG, "-- start --");
 
         final String initialMessage =
-                "{\"type\": \"search\", \"text\": \"lara fabian\"}";
+                "{\"type\": \"search\", \"text\": \"accidentally in love\"}";
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -96,8 +82,11 @@ public class MainActivity extends Activity {
                 String scheme = req.getUrl().getScheme();
                 String path = req.getUrl().getPath();
                 if (scheme != null && scheme.equals("file") && path != null) {
-                    return new WebResourceResponse("text/javascript", "UTF-8",
-                            openAsset(path));
+                    if (path.equals("/js/components/playlist.js"))
+                        return new WebResourceResponse("text/javascript", "UTF-8", new ByteArrayInputStream(new byte[0]));
+                    else
+                        return new WebResourceResponse("text/javascript", "UTF-8",
+                                openAsset(path));
                 } else {
                     return super.shouldInterceptRequest(view, req);
                 }
@@ -112,7 +101,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        webView.loadDataWithBaseURL("file:///main.html",
+        webView.loadDataWithBaseURL("file:///app.html",
                 readAsString(openAsset("/html/app.html")),
                 "text/html",
                 "utf-8", null);
@@ -184,6 +173,10 @@ public class MainActivity extends Activity {
         public void postResponse(int id, String resp) throws IOException {
             httpd.postResponse(id, resp);
         }
+        @JavascriptInterface
+        public void resume() { player.resume(); }
+        @JavascriptInterface
+        public void pause() { player.pause(); }
     }
 
     public void jsCall(String json) {

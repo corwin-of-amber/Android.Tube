@@ -75,6 +75,11 @@ public class Playlist {
             tracks.add(track);
         }
 
-        return new Playlist(tracks);
+        Playlist playlist = new Playlist(tracks);
+
+        if (json.has("nowPlaying"))
+            playlist.nowPlaying = json.getInt("nowPlaying");
+
+        return playlist;
     }
 }

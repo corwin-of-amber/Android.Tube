@@ -114,7 +114,9 @@ if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
             mainActivity.setVolume(level, max);
         },
         getPosition(cb) {
-        }
+        },
+        resume() { mainActivity.resume(); return true; },
+        pause() { mainActivity.pause(); return true; }
     }
 }
 else if (typeof server_action !== 'undefined') {  /* In client browser */

@@ -46,7 +46,8 @@ function getStream(youtubeUrl, type) {
                     i++;
                     console.log(`format #${i}/${n}: ${format.type}
                         '${format.url}'`);
-                    if (!webm && format.type.startsWith(type)) webm = format;
+                    if (!webm && format.type && format.type.startsWith(type))
+                        webm = format;
                 }
 
                 if (webm) resolve(webm);

@@ -148,18 +148,26 @@ $(function() {
             </div>
         `,
         mounted() {
-            this.playlist = Playlist.restore();
+            if (typeof Playlist !== 'undefined')
+                this.playlist = Playlist.restore();
         },
         methods: {
             search(query) {
                 return this.$refs.search.search(query);
             },
             watch(item) {
-                var self = this;
+                var self = this, operation;
                 this.status = 'pending';
-                watch(this.curPlaying = item.id.videoId)
-                .catch(function() { self.status = 'error'; })
-                .then(function() { self.status = 'playing'; });
+                this.curPlaying = item.id.videoId;
+                if (this.playlist && item._playlist === this.playlist.id && typeof watchFromList !== 'undefined') {
+                    operation = watchFromList(this.playlist.export(item));
+                }
+                else {
+                    operation = watch(this.curPlaying);
+                }
+                operation
+                    .catch(function() { self.status = 'error'; })
+                    .then(function() { self.status = 'playing'; });
             },
 
             dragOver(ev) { ev.preventDefault(); },

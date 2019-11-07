@@ -113,8 +113,8 @@ public class HTTPD extends NanoWSD {
         return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
     }
 
-    Response handlePost(IHTTPSession session) {
-        Map<String, String> files = new HashMap<String, String>();
+    private Response handlePost(IHTTPSession session) {
+        Map<String, String> files = new HashMap<>();
         try {
             session.parseBody(files);
         }
@@ -131,7 +131,7 @@ public class HTTPD extends NanoWSD {
             return sendToJS(postData);
     }
 
-    Response sendToJS(String req) {
+    private Response sendToJS(String req) {
 
         int id = nextReqId++;
 
@@ -177,7 +177,7 @@ public class HTTPD extends NanoWSD {
         }
     }
 
-    Response playlist(String playlistData) {
+    private Response playlist(String playlistData) {
         try {
             Playlist playlist = Playlist.fromJSON(playlistData);
             context.player.playFromList(playlist);
