@@ -115,6 +115,13 @@ class Playlist {
         return pl;
     }
 
+    download(filename) {
+        if (!filename) filename = `${this.name || 'playlist'}.json`;
+        var blob = new Blob([JSON.stringify(this)]);
+        $('<a>').attr({href: URL.createObjectURL(blob), download: filename})
+            [0].click();
+    }
+
     /**
      * Creates a playlist JSON that is suitable for sending to the server.
      */
