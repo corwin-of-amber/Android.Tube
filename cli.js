@@ -5,7 +5,7 @@ const http = require('http');
 var BASE = new URL('http://10.0.0.11:2224');
 
 function play(url) {
-    post('/', {type: 'watch', url: encodeURI(url)});
+    post('/', {type: 'watch', url: toURI(url)});
 }
 
 function playlist(filename) {
@@ -75,6 +75,20 @@ function readTracks(filename) {
     ));
 }
 
+function toURI(url) {
+    // if url is a filename, translate to http address using URL table
+    if (!url.match(/^https?:/)) {
+        var urls = require('./data/urls.json');
+        for (let k in urls) {
+            if (url.startsWith(k)) {
+                url = urls[k] + url.slice(k.length);
+                break;
+            }
+        }
+        console.log('▶︎', url);
+    }
+    return encodeURI(url);
+}
 
 var opts = require('commander'), done;
 
