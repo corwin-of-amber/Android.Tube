@@ -274,18 +274,24 @@ public class HTTPD extends NanoWSD {
 
     @Override
     protected WebSocket openWebSocket(IHTTPSession handshake) {
-        Log.d(TAG, "websocket incoming [" + handshake.getUri() + "]");
-        WebSocketConnection ws = new WebSocketConnection(handshake, context);
+        String path = handshake.getUri();
+        Log.d(TAG, "websocket incoming [" + path + "]");
 
-        ws.setFileStoreListener(new WebSocketConnection.FileStoreListener() {
-            @Override
-            public void onStored(File file) {
-                Log.d(TAG, "playing (from cache): " + file.getPath());
-                context.player.playFile(file);
-            }
-        });
+        if (path.startsWith("/cache/")) {
+            FileStoreWebSocketConnection ws = new FileStoreWebSocketConnection(handshake, context);
 
-        return ws;
+            ws.setFileStoreListener(new FileStoreWebSocketConnection.FileStoreListener() {
+                @Override
+                public void onStored(File file) {
+                    Log.d(TAG, "playing (from cache): " + file.getPath());
+                    context.player.playFile(file);
+                }
+            });
+
+            return ws;
+        }
+        else
+            return new WebSocketConnection(handshake, context);
     }
 
 }
