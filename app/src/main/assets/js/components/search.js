@@ -170,9 +170,27 @@ $(function() {
                     .then(function() { self.status = 'playing'; });
             },
 
+            upload(file) {
+                var self = this;
+                console.log(`%cupload %c${file.name} [${file.type}]`, "color: #f99", "color: #f33");
+                if (file.type == 'application/json') {
+                    Playlist.upload(file).then(function(playlist) {
+                        self.playlist = playlist;
+                    });
+                }
+                else if (file.type.startsWith('audio/')) {
+                    var w = new WebSocket(`ws://${location.host}/cache/a`);
+                    w.onopen = function() { w.send(file); w.close(); }
+                }
+                else console.warn("unrecognized file type: " + file.type);
+            },
+
             dragOver(ev) { ev.preventDefault(); },
             drop(ev) {
-                if (this.$refs.playlist)
+                ev.preventDefault();
+                if (ev.dataTransfer.files.length > 0)
+                    this.upload(ev.dataTransfer.files[0])
+                else if (this.$refs.playlist)
                     this.$refs.playlist.dropAway(ev);
             }
         }

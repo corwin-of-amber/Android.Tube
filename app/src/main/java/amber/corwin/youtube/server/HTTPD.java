@@ -1,19 +1,28 @@
 package amber.corwin.youtube.server;
 
 
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.util.Log;
 import android.util.SparseArray;
 
 import org.json.JSONException;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
 import amber.corwin.youtube.MainActivity;
+import amber.corwin.youtube.Player;
 import amber.corwin.youtube.Playlist;
 import amber.corwin.youtube.VolumeSetting;
 import fi.iki.elonen.NanoWSD;
@@ -24,10 +33,12 @@ public class HTTPD extends NanoWSD {
 
     private static final String TAG = "HTTPD";
 
+    private MainActivity context;
+
     private int nextReqId = 3;
     private SparseArray<OutputStream> pendingRequests = new SparseArray<>();
 
-    private MainActivity context;
+    private FetchTask fetchTask = null;
 
     public HTTPD(MainActivity context) { super(2224); this.context = context; }
 
@@ -36,7 +47,9 @@ public class HTTPD extends NanoWSD {
         Method method = session.getMethod();
         String path = session.getUri();
 
-        if (path.equals("/") && method == Method.GET && !isWebsocketRequested(session))
+        if (isWebsocketRequested(session)) return super.serve(session);
+
+        if (path.equals("/") && method == Method.GET)
             return index();
         else if (path.equals("/js/yapi.js"))
             return asset("/js/client.js");
@@ -50,6 +63,10 @@ public class HTTPD extends NanoWSD {
             return pause();
         else if (path.equals("/resume"))
             return resume();
+        else if (path.startsWith("/fetch"))
+            return fetch(session);
+        else if (path.startsWith("/cache"))
+            return cache(session);
         else if (method == Method.POST)
             return handlePost(session);
         else
@@ -109,8 +126,75 @@ public class HTTPD extends NanoWSD {
         }
     }
 
+    private Response fetch(IHTTPSession session) {
+        String q = session.getQueryParameterString();
+        try {
+            fetchTask = new FetchTask(context.getCacheDir(), context.player);
+            fetchTask.execute(new URL(q));
+            return ok();
+        }
+        catch (MalformedURLException e) {
+            return error("fetch " + q + ": " + e);
+        }
+    }
+
+    private Response cache(IHTTPSession session) {
+        try {
+            File file = fetchTask != null ? fetchTask.file
+                            : new File(context.getCacheDir(), "a.webm");
+            InputStream data = new FileInputStream(file);
+            return newChunkedResponse(Response.Status.OK, "text/json", data);
+        }
+        catch (IOException e) {
+            return error("cache: " + e);
+        }
+    }
+
+    private static class FetchTask extends AsyncTask<URL, Void, Void> {
+
+        private File file;
+        private Player player;
+
+        FetchTask(File dir, Player player) {
+            file = new File(dir, "a.webm");
+            this.player = player;
+        }
+
+        @Override
+        protected Void doInBackground(URL ...urls) {
+            URL url = urls[0];
+            try {
+                try (InputStream cis = url.openStream();
+                     OutputStream fos = new FileOutputStream(file)) {
+
+                    byte[] buf = new byte[4096];
+                    int rd, totrd = 0;
+                    while ((rd = cis.read(buf)) > 0) {
+                        fos.write(buf, 0, rd);
+                        totrd += rd;
+                        Log.d(TAG, "fetch: " + totrd + " bytes");
+                    }
+                }
+            }
+            catch (IOException e) {
+                Log.e(TAG, "fetch failed", e);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            if (player != null)
+                player.playMedia(Uri.parse("http://localhost:2224/cache"));
+        }
+    }
+
     private Response ok() {
         return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
+    }
+
+    private Response error(String msg) {
+        return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", msg);
     }
 
     private Response handlePost(IHTTPSession session) {
@@ -190,8 +274,18 @@ public class HTTPD extends NanoWSD {
 
     @Override
     protected WebSocket openWebSocket(IHTTPSession handshake) {
-        Log.d(TAG, "websocket incoming");
-        return new WebSocketConnection(handshake);
+        Log.d(TAG, "websocket incoming [" + handshake.getUri() + "]");
+        WebSocketConnection ws = new WebSocketConnection(handshake, context);
+
+        ws.setFileStoreListener(new WebSocketConnection.FileStoreListener() {
+            @Override
+            public void onStored(File file) {
+                Log.d(TAG, "playing (from cache): " + file.getPath());
+                context.player.playFile(file);
+            }
+        });
+
+        return ws;
     }
 
 }

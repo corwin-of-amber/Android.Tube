@@ -1,10 +1,11 @@
 package amber.corwin.youtube;
 
 import android.app.Activity;
-import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.AsyncTask;
+import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -13,7 +14,17 @@ import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.ref.WeakReference;
+import java.net.URL;
+
+
 
 public class Player {
 
@@ -59,7 +70,23 @@ public class Player {
         });
     }
 
-    void playMedia(final Uri uri) {
+    private MediaPlayer setup() {
+        if (mediaPlayer != null) mediaPlayer.stop();
+
+        MediaPlayer player = new MediaPlayer();
+        player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+
+        return player;
+    }
+
+    private void engage(MediaPlayer player) throws IOException {
+        player.setVolume(volume, volume);
+        player.prepare();
+        player.start();
+        mediaPlayer = player;
+    }
+
+    public void playMedia(final Uri uri) {
         if (this.video != null) {
             context.runOnUiThread(new Runnable() {
                 @Override
@@ -69,21 +96,26 @@ public class Player {
             });
         }
         else {
-            if (mediaPlayer != null) mediaPlayer.stop();
-
-            MediaPlayer player = new MediaPlayer();
-            player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            MediaPlayer player = setup();
             try {
                 player.setDataSource(this.context.getApplicationContext(), uri);
-                player.setVolume(volume, volume);
-                player.prepare();
-                player.start();
-                mediaPlayer = player;
+                engage(player);
             }
             catch (IOException e) {
                 Toast.makeText(this.context, "Failed to open " + uri, Toast.LENGTH_LONG).show();
                 mediaPlayer = null;
             }
+        }
+    }
+
+    public void playFile(final File file) {
+        MediaPlayer player = setup();
+        try {
+            player.setDataSource(file.toURI().toString());
+            engage(player);
+        }
+        catch (IOException e) {
+            Toast.makeText(this.context, "Failed to open " + file.getPath(), Toast.LENGTH_LONG).show();
         }
     }
 
