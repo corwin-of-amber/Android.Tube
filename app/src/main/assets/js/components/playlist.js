@@ -99,6 +99,18 @@ class Playlist {
                 : this.tracks.findIndex(e => JSON.stringify(e.id) === id);
     }
 
+    static from(props) {
+        if (typeof props === 'string') props = JSON.parse(props);
+        var pl = Object.assign(new Playlist, props || {});
+        if (!pl.id && pl.tracks.length > 0)
+            pl.id = Playlist.mkShortId();
+        for (let track of pl.tracks) {
+            if (!track._playlist)     track._playlist = pl.id;
+            if (!track._playlistItem) track._playlistItem = Playlist.mkShortId();
+        }
+        return pl;    
+    }
+
     store(key) { Playlist.store(this, key); }
 
     static store(data, key='tube.playlist') {
@@ -106,13 +118,7 @@ class Playlist {
     }
 
     static restore(key='tube.playlist') {
-        var stored = localStorage[key],
-            pl = Object.assign(new Playlist, stored ? JSON.parse(stored) : {});
-        for (let track of pl.tracks) {
-            if (!track._playlist)     track._playlist = this.id;
-            if (!track._playlistItem) track._playlistItem = Playlist.mkShortId();
-        }
-        return pl;
+        return Playlist.from(localStorage[key]);
     }
 
     download(filename) {
@@ -120,6 +126,10 @@ class Playlist {
         var blob = new Blob([JSON.stringify(this)]);
         $('<a>').attr({href: URL.createObjectURL(blob), download: filename})
             [0].click();
+    }
+
+    static async upload(blob) {
+        return Playlist.from(await blob.text());
     }
 
     /**

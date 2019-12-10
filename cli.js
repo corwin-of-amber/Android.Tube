@@ -4,8 +4,17 @@ const http = require('http');
 
 var BASE = new URL('http://10.0.0.11:2224');
 
-function play(url) {
+function play(...urls) {
+    (urls.length == 1) ? playSingle(urls[0]) : playMultiple(urls);
+}
+
+function playSingle(url) {
     post('/', {type: 'watch', url: toURI(url)});
+}
+
+function playMultiple(urls) {
+    var tracks = urls.map((url, i) => ({id: i, uri: toURI(url)}));
+    post('/playlist', {tracks});
 }
 
 function playlist(filename) {
@@ -95,8 +104,8 @@ var opts = require('commander'), done;
 opts.option('-s,--server <url>', 'server url')
     .on('option:server', x => BASE = new URL(`http://${x}:2224`));
 
-opts.command('play <url>')
-    .action((url) => { play(url); done = true; });
+opts.command('play <urls...>')
+    .action((urls) => { play(...urls); done = true; });
 opts.command('playlist <filename>')
     .action((filename) => { playlist(filename); done = true; })
 opts.command('stop')
