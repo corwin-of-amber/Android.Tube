@@ -1,6 +1,5 @@
 package amber.corwin.youtube.server;
 
-import android.content.Context;
 import android.util.Log;
 
 import java.io.File;
@@ -9,8 +8,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import fi.iki.elonen.NanoWSD;
-
-import amber.corwin.youtube.MainActivity;
 
 
 
@@ -21,9 +18,10 @@ public class FileStoreWebSocketConnection extends WebSocketConnection {
 
     private FileStoreListener fileStoreListener;
 
-    FileStoreWebSocketConnection(NanoWSD.IHTTPSession handshakeRequest, MainActivity context) {
-        super(handshakeRequest, context);
-        file = new File(cachedMusicDir(context), basename(handshakeRequest.getUri()));
+    FileStoreWebSocketConnection(NanoWSD.IHTTPSession handshakeRequest,
+                                 File target) {
+        super(handshakeRequest);
+        file = target;
     }
 
     void setFileStoreListener(FileStoreListener listener) {
@@ -64,18 +62,6 @@ public class FileStoreWebSocketConnection extends WebSocketConnection {
                 store.write(buf);
         }
         catch (IOException e) { Log.e(TAG, "store", e); }
-    }
-
-    private static String basename(String path) {
-        return path.substring(path.lastIndexOf('/') + 1);
-    }
-
-    private static File cachedMusicDir(Context context) {
-        File d = new File(context.getCacheDir(), "music");
-        if (!d.mkdirs()) {
-            Log.w(TAG, "mkdirs '" + d.getPath() + "' failed");
-        }
-        return d;
     }
 
     public interface FileStoreListener {

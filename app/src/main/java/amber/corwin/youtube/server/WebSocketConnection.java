@@ -2,16 +2,11 @@ package amber.corwin.youtube.server;
 
 import android.util.Log;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import fi.iki.elonen.NanoWSD;
-
-import amber.corwin.youtube.MainActivity;
 
 
 
@@ -22,7 +17,7 @@ public class WebSocketConnection extends NanoWSD.WebSocket {
 
     private TimerTask ping = null;
 
-    WebSocketConnection(NanoWSD.IHTTPSession handshakeRequest, MainActivity context) {
+    WebSocketConnection(NanoWSD.IHTTPSession handshakeRequest) {
         super(handshakeRequest);
     }
 

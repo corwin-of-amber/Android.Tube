@@ -1,6 +1,7 @@
 package amber.corwin.youtube.server;
 
 
+import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -129,7 +130,7 @@ public class HTTPD extends NanoWSD {
     private Response fetch(IHTTPSession session) {
         String q = session.getQueryParameterString();
         try {
-            fetchTask = new FetchTask(context.getCacheDir(), context.player);
+            fetchTask = new FetchTask(cacheDir(), context.player);
             fetchTask.execute(new URL(q));
             return ok();
         }
@@ -139,9 +140,9 @@ public class HTTPD extends NanoWSD {
     }
 
     private Response cache(IHTTPSession session) {
+        String path = session.getUri();
         try {
-            File file = fetchTask != null ? fetchTask.file
-                            : new File(context.getCacheDir(), "a.webm");
+            File file = new File(cacheDir(), basename(path));
             InputStream data = new FileInputStream(file);
             return newChunkedResponse(Response.Status.OK, "text/json", data);
         }
@@ -185,7 +186,7 @@ public class HTTPD extends NanoWSD {
         @Override
         protected void onPostExecute(Void aVoid) {
             if (player != null)
-                player.playMedia(Uri.parse("http://localhost:2224/cache"));
+                player.playMedia(Uri.parse("http://localhost:2224/cache/a.webm"));
         }
     }
 
@@ -278,7 +279,8 @@ public class HTTPD extends NanoWSD {
         Log.d(TAG, "websocket incoming [" + path + "]");
 
         if (path.startsWith("/cache/")) {
-            FileStoreWebSocketConnection ws = new FileStoreWebSocketConnection(handshake, context);
+            FileStoreWebSocketConnection ws = new FileStoreWebSocketConnection(
+                    handshake, new File(cacheDir(), basename(path)));
 
             ws.setFileStoreListener(new FileStoreWebSocketConnection.FileStoreListener() {
                 @Override
@@ -291,7 +293,19 @@ public class HTTPD extends NanoWSD {
             return ws;
         }
         else
-            return new WebSocketConnection(handshake, context);
+            return new WebSocketConnection(handshake);
+    }
+
+    private static String basename(String path) {
+        return path.substring(path.lastIndexOf('/') + 1);
+    }
+
+    private File cacheDir() {
+        File d = new File(context.getCacheDir(), "music");
+        if (!d.isDirectory() && !d.mkdirs()) {
+            Log.w(TAG, "'" + d.getPath() + "': failed to create directory");
+        }
+        return d;
     }
 
 }
