@@ -178,9 +178,10 @@ $(function() {
                         self.playlist = playlist;
                     });
                 }
-                else if (file.type.startsWith('audio/')) {
-                    var w = new WebSocket(`ws://${location.host}/cache/a`);
-                    w.onopen = function() { w.send(file); w.close(); }
+                else if (file.type.match(/^(audio|video)[/]/) ||
+                         file.name.match(/[.](mkv)$/)) {
+                    var w = new WebSocketConnection('cache/a');
+                    w.upload(file).then(watch);
                 }
                 else console.warn("unrecognized file type: " + file.type);
             },

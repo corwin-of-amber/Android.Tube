@@ -143,8 +143,10 @@ public class HTTPD extends NanoWSD {
         String path = session.getUri();
         try {
             File file = new File(cacheDir(), basename(path));
+
             InputStream data = new FileInputStream(file);
-            return newChunkedResponse(Response.Status.OK, "text/json", data);
+            return newFixedLengthResponse(Response.Status.OK,
+                    "application/octet-stream", data, file.length());
         }
         catch (IOException e) {
             return error("cache: " + e);
@@ -282,13 +284,20 @@ public class HTTPD extends NanoWSD {
             FileStoreWebSocketConnection ws = new FileStoreWebSocketConnection(
                     handshake, new File(cacheDir(), basename(path)));
 
+            /*
             ws.setFileStoreListener(new FileStoreWebSocketConnection.FileStoreListener() {
                 @Override
-                public void onStored(File file) {
+                public void onStored(final File file) {
                     Log.d(TAG, "playing (from cache): " + file.getPath());
-                    context.player.playFile(file);
+                    context.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            context.player.playFile(file);
+                        }
+                    });
                 }
             });
+            */
 
             return ws;
         }

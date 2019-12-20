@@ -48,3 +48,42 @@ function play(mediaUrl) {
         $('<video>').attr('controls', true)
             .append($('<source>').attr('src', mediaUrl)));
 }
+
+/**
+ * Communicating with the server via WebSocket, for status and
+ * file uploads.
+ */
+class WebSocketConnection {
+
+    constructor(path) {
+        this.ws = new WebSocket(`ws://${location.host}/${path}`);
+    }
+
+    upload(file) {
+        var self = this;
+        return new Promise(function(resolve) {
+            self.ws.onopen = function() { self.sendChunked(file); }
+            self.ws.onclose = function() {
+                console.log('%cupload finished.', "color: #f99"); 
+                resolve('file:///music/a');  // TODO
+            }
+        });
+    }
+
+    sendChunked(file) {
+        var ws = this.ws;
+        var out = new WritableStream({
+            write (buf) { ws.send(buf); },
+        });
+        this.monitorProgress();
+
+        return new Response(file).body.pipeTo(out)
+            .finally(function() { ws.close(); });
+    }
+
+    monitorProgress() {
+        var ws = this.ws;
+        var iv = setInterval(function() { console.log(ws.bufferedAmount); }, 500);
+        ws.addEventListener('close', function() { clearInterval(iv); });
+    }
+}

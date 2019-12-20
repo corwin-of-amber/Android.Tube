@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -15,15 +13,9 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.ref.WeakReference;
-import java.net.URL;
-
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class Player {
@@ -71,7 +63,12 @@ public class Player {
     }
 
     private MediaPlayer setup() {
-        if (mediaPlayer != null) mediaPlayer.stop();
+        Log.d(TAG, "player setup");
+        if (mediaPlayer != null) {
+            if (mediaPlayer.isPlaying()) mediaPlayer.stop();
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
 
         MediaPlayer player = new MediaPlayer();
         player.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -79,14 +76,35 @@ public class Player {
         return player;
     }
 
-    private void engage(MediaPlayer player) throws IOException {
+    private void engage(MediaPlayer player, final String title) throws IOException {
+        Log.d(TAG, "player engage");
         player.setVolume(volume, volume);
-        player.prepare();
-        player.start();
+        player.prepareAsync();
+        player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer player) {
+                player.setOnErrorListener(null);
+                player.start();
+            }
+        });
+        player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+            @Override
+            public boolean onError(MediaPlayer player, int i, int i1) {
+                Toast.makeText(context, "cannot play: " + title, Toast.LENGTH_LONG).show();
+                mediaPlayer = null;
+                return false;
+            }
+        });
+        assert mediaPlayer == null;
         mediaPlayer = player;
     }
 
     public void playMedia(final Uri uri) {
+        if ("file".equals(uri.getScheme())) {
+            playFile(new File(context.getCacheDir(), uri.getPath()));
+            return;
+        }
+
         if (this.video != null) {
             context.runOnUiThread(new Runnable() {
                 @Override
@@ -99,10 +117,10 @@ public class Player {
             MediaPlayer player = setup();
             try {
                 player.setDataSource(this.context.getApplicationContext(), uri);
-                engage(player);
+                engage(player, uri.toString());
             }
             catch (IOException e) {
-                Toast.makeText(this.context, "Failed to open " + uri, Toast.LENGTH_LONG).show();
+                Toast.makeText(this.context, "Failed to open " + uri + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
                 mediaPlayer = null;
             }
         }
@@ -112,10 +130,10 @@ public class Player {
         MediaPlayer player = setup();
         try {
             player.setDataSource(file.toURI().toString());
-            engage(player);
+            engage(player, file.getPath());
         }
         catch (IOException e) {
-            Toast.makeText(this.context, "Failed to open " + file.getPath(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this.context, "Failed to open " + file.getPath() + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -186,10 +204,15 @@ public class Player {
     }
 
     public PlaybackPosition getPosition() {
-        if (this.mediaPlayer != null)
-            return new PlaybackPosition(this.mediaPlayer.getCurrentPosition(), this.mediaPlayer.getDuration());
-        else
+        try {
+            if (this.mediaPlayer != null)
+                return new PlaybackPosition(this.mediaPlayer.getCurrentPosition(), this.mediaPlayer.getDuration());
+            else
+                return null;
+        }
+        catch (IllegalStateException e) {   /* MediaPlayer not ready */
             return null;
+        }
     }
 
     public void setPosition(int seekTo) {

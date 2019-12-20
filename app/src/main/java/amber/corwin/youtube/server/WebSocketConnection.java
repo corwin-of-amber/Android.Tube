@@ -30,7 +30,7 @@ public class WebSocketConnection extends NanoWSD.WebSocket {
                 @Override
                 public void run(){
                     try { ping(PING_PAYLOAD); }
-                    catch (IOException e) { ping.cancel(); }
+                    catch (IOException e) { if (ping != null) ping.cancel(); }
                 }
             };
             new Timer().schedule(ping, 1000, 1000);
