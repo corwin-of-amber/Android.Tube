@@ -16,7 +16,7 @@ function watch(urlOrId) {
     else {
         return getWatchUrl(urlOrId).then(function(webm) {
             if (typeof mainActivity === 'undefined')
-                play(webm.url, webm.type);
+                play(webm.url, webm.mimeType);
             else
                 mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
         });
@@ -32,29 +32,25 @@ function getWatchUrl(urlOrId) {
 
 function getStream(youtubeUrl, type) {
     type = type || DEFAULT_MEDIA_TYPE;
-    return new Promise(function(resolve, reject) {
-        ytdl.getInfo(youtubeUrl, function (err, info) {
-            if (err) {
-                console.error('ytdl error:\n' + err);
-                reject(err);
-            }
-            else if (info) {
-                console.log('ytdl info:');
-                console.log(`token = ${info.account_playback_token}`);
-                var n = info.formats.length, i = 0, webm;
-                for (let format of info.formats) {
-                    i++;
-                    console.log(`format #${i}/${n}: ${format.type}
-                        '${format.url}'`);
-                    if (!webm && format.type && format.type.startsWith(type))
-                        webm = format;
-                }
+    return ytdl.getInfo(youtubeUrl).then(function (info) {
+        if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
 
-                if (webm) resolve(webm);
-                else reject(`no stream for '${youtubeUrl}' (${type}*)`);
-            }
-            else reject(`empty info for '${youtubeUrl}'`);
-        });
+        console.log('ytdl info:');
+        console.log(`csn = ${info.csn}`);
+        var n = info.formats.length, i = 0, webm;
+        for (let format of info.formats) {
+            let ftype = format.mimeType;
+            console.log(`format #${++i}/${n}: ${ftype}
+                '${format.url}'`);
+            if (!webm && ftype && ftype.startsWith(type))
+                webm = format;
+        }
+
+        if (webm) return webm;
+        else throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
+    })
+    .catch(function(err) {
+        console.error('ytdl error:\n' + err);
     });
 }
 
