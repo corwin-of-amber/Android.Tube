@@ -14,9 +14,9 @@ Vue.component('volume-control', {
 
 
 Vue.component('position-bar', {
-    data: function() { return {pos: 0, total: 20, monitorInterval: 500}; },
+    data: function() { return {pos: 0, duration: 20}; },
     template: `
-        <input type="range" class="position-bar" v-model.number="pos" min="0" :max="total">
+        <input type="range" class="position-bar" v-model.number="pos" min="0" :max="duration">
     `,
     mounted() {
         var self = this;
@@ -25,26 +25,14 @@ Vue.component('position-bar', {
                 controls.seek(pos);
             }
         });
-    },
-    methods: {
-        monitor() {
-            if (this._monitor) return;
-            var self = this, h;
-            this._monitor = setInterval(h = function() {
-                controls.getPosition(function(p) {
-                    self.pos = self._pos = p.pos;
-                    self.total = p.total;
-                });
-            }, this.monitorInterval);
-            h();
-        },
-        unmonitor() {
-            if (this._monitor) {
-                clearInterval(this._monitor);
-                this._monitor = null;
+        this.$parent.$watch('status', function(s) {
+            var p = s.position;
+            if (p) {
+                self.pos = self._pos = p.pos;
+                self.duration = p.duration;
             }
-        }
-    }
+        });
+    },
 });
 
 
@@ -55,6 +43,12 @@ Vue.component('play-pause-button', {
     `,
     computed: {
         caption() { return this.playing ? "❙❙" : "▶︎"}
+    },
+    mounted() {
+        var self = this;
+        this.$parent.$watch('status', function(s) {
+            if (s.playing != undefined) self.playing = s.playing;
+        });
     },
     methods: {
         toggle() {
@@ -81,7 +75,7 @@ Vue.component('playlist-button', {
 
 Vue.component('control-panel', {
     props: ['playlist'],
-    data: function() { return {expand: false}; },
+    data: function() { return {expand: false, status: {}, monitorInterval: 500}; },
     template: `
         <div class="control-panel" :class="{expand}">
             <div class="controls">
@@ -97,8 +91,20 @@ Vue.component('control-panel', {
             this.expand = !this.expand;
             this.expand ? this.monitor() : this.unmonitor();
         },
-        monitor() { this.$refs.position.monitor(); },
-        unmonitor() { this.$refs.position.unmonitor(); }
+        monitor() {
+            if (this._monitor) return;
+            var self = this, h;
+            this._monitor = setInterval(h = function() {
+                controls.getStatus(function(s) { self.status = s; });
+            }, this.monitorInterval);
+            h();
+        },
+        unmonitor() {
+            if (this._monitor) {
+                clearInterval(this._monitor);
+                this._monitor = null;
+            }
+        }
     },
     mounted() {
         if (this.expand) this.monitor();
@@ -114,6 +120,8 @@ if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
             mainActivity.setVolume(level, max);
         },
         getPosition(cb) {
+            cb({pos: mainActivity.getPosition(),
+                duration: mainActivity.getDuration()});
         },
         resume() { mainActivity.resume(); return true; },
         pause() { mainActivity.pause(); return true; }
@@ -124,10 +132,13 @@ else if (typeof server_action !== 'undefined') {  /* In client browser */
         setVolume(level, max) {
             server_action('vol?' + level + '/' + max);
         },
+        getStatus(cb) {
+            server_action('status').then(cb);
+        },
         getPosition(cb) {
             server_action('pos').then(function(res) {
-                var pos_total = res.split('/');
-                cb({pos: Number(pos_total[0]), total: Number(pos_total[1])});
+                var pos_dur = res.split('/');
+                cb({pos: Number(pos_dur[0]), duration: Number(pos_dur[1])});
             });
         },
         seek(pos) {
@@ -143,8 +154,8 @@ else {                                     /* In NWjs standalone app */
     controls = {
         getPosition(cb) {
             a = $('audio')[0];
-            cb(a ? {pos: a.currentTime * 1000, total: a.duration * 1000}
-                 : {pos: 0, total: 0});
+            cb(a ? {pos: a.currentTime * 1000, duration: a.duration * 1000}
+                 : {pos: 0, duration: 0});
         },
         seek(pos) {
             if (a = $('audio')[0]) a.currentTime = pos / 1000;

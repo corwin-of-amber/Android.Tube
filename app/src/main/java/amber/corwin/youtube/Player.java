@@ -14,8 +14,7 @@ import android.widget.VideoView;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+
 
 
 public class Player {
@@ -31,6 +30,8 @@ public class Player {
     private float volume = 1.0f;
 
     private Playlist playlist;
+    private Uri nowPlaying;
+    private boolean isPrepared;
 
     private UriHandler uriHandler = null;
 
@@ -78,11 +79,17 @@ public class Player {
 
     private void engage(MediaPlayer player, final String title) throws IOException {
         Log.d(TAG, "player engage");
+
+        assert mediaPlayer == null;
+        mediaPlayer = player;
+        isPrepared = false;
+
         player.setVolume(volume, volume);
         player.prepareAsync();
         player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer player) {
+                isPrepared = true;
                 player.setOnErrorListener(null);
                 player.start();
             }
@@ -90,16 +97,14 @@ public class Player {
         player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
             public boolean onError(MediaPlayer player, int i, int i1) {
-                Toast.makeText(context, "cannot play: " + title, Toast.LENGTH_LONG).show();
-                mediaPlayer = null;
-                return false;
+                playerError("Cannot play: " + title); return false;
             }
         });
-        assert mediaPlayer == null;
-        mediaPlayer = player;
     }
 
-    public void playMedia(final Uri uri) {
+    public void playMedia(final Uri uri, Uri originalUri) {
+        this.nowPlaying = (originalUri == null) ? uri : originalUri;
+
         if ("file".equals(uri.getScheme())) {
             playFile(new File(context.getCacheDir(), uri.getPath()));
             return;
@@ -120,20 +125,19 @@ public class Player {
                 engage(player, uri.toString());
             }
             catch (IOException e) {
-                Toast.makeText(this.context, "Failed to open " + uri + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
-                mediaPlayer = null;
+                playerError("Failed to open " + uri + ": " + e.getMessage());
             }
         }
     }
 
-    public void playFile(final File file) {
+    void playFile(final File file) {
         MediaPlayer player = setup();
         try {
             player.setDataSource(file.toURI().toString());
             engage(player, file.getPath());
         }
         catch (IOException e) {
-            Toast.makeText(this.context, "Failed to open " + file.getPath() + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
+            playerError("Failed to open " + file.getPath() + ": " + e.getMessage());
         }
     }
 
@@ -150,7 +154,7 @@ public class Player {
     }
 
     void playTrack(Playlist.Track track, Uri uri) {
-        playMedia(uri);
+        playMedia(uri, track.uri);
 
         if (mediaPlayer != null) {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
@@ -162,6 +166,13 @@ public class Player {
                 }
             });
         }
+    }
+
+    private void playerError(String msg) {
+        Toast.makeText(this.context, msg, Toast.LENGTH_LONG).show();
+        if (mediaPlayer != null) mediaPlayer.release();
+        mediaPlayer = null;
+        nowPlaying = null;
     }
 
     public void playFromList(Playlist playlist) {
@@ -177,13 +188,13 @@ public class Player {
         }
     }
 
-    public void pause() {
-        if (mediaPlayer != null && mediaPlayer.isPlaying()) mediaPlayer.pause();
-    }
+    public void pause() { if (isPlaying()) mediaPlayer.pause(); }
 
     public void resume() {
         if (mediaPlayer != null && !mediaPlayer.isPlaying()) mediaPlayer.start();
     }
+
+    public boolean isPlaying() { return mediaPlayer != null && mediaPlayer.isPlaying(); }
 
     public void setVolume(int level, int max) {
         setVolume((float)level / max);
@@ -205,8 +216,8 @@ public class Player {
 
     public PlaybackPosition getPosition() {
         try {
-            if (this.mediaPlayer != null)
-                return new PlaybackPosition(this.mediaPlayer.getCurrentPosition(), this.mediaPlayer.getDuration());
+            if (mediaPlayer != null && isPrepared)
+                return new PlaybackPosition(mediaPlayer.getCurrentPosition(), mediaPlayer.getDuration());
             else
                 return null;
         }
@@ -216,7 +227,13 @@ public class Player {
     }
 
     public void setPosition(int seekTo) {
-        this.mediaPlayer.seekTo(seekTo);
+        mediaPlayer.seekTo(seekTo);
+    }
+
+    public Uri getCurrentUri() { return nowPlaying; }
+
+    public Playlist.Track getCurrentTrack() {
+        return (playlist == null) ? null : playlist.current();
     }
 
     private void onVideoReady(MediaPlayer mediaPlayer) {

@@ -8,6 +8,7 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import amber.corwin.youtube.MainActivity;
+import amber.corwin.youtube.PlaybackPosition;
 import amber.corwin.youtube.Player;
 import amber.corwin.youtube.Playlist;
 import amber.corwin.youtube.VolumeSetting;
@@ -60,6 +62,8 @@ public class HTTPD extends NanoWSD {
             return vol(session);
         else if (path.startsWith("/pos"))
             return pos(session);
+        else if (path.equals("/status"))
+            return status();
         else if (path.equals("/pause"))
             return pause();
         else if (path.equals("/resume"))
@@ -127,6 +131,24 @@ public class HTTPD extends NanoWSD {
         }
     }
 
+    private Response status() {
+        try {
+            JSONObject o = new JSONObject();
+            PlaybackPosition pos = context.player.getPosition();
+            if (pos != null) {
+                JSONObject opos = new JSONObject();
+                opos.put("pos", pos.pos);   opos.put("duration", pos.duration);
+                o.put("position", opos);
+            }
+            Uri uri = context.player.getCurrentUri();
+            if (uri != null)
+                o.put("uri", uri.toString());
+            o.put("playing", context.player.isPlaying());
+            return newFixedLengthResponse(Response.Status.OK, "text/json", o.toString());
+        }
+        catch (JSONException e) { return error("position: " + e); }
+    }
+
     private Response fetch(IHTTPSession session) {
         String q = session.getQueryParameterString();
         try {
@@ -188,7 +210,7 @@ public class HTTPD extends NanoWSD {
         @Override
         protected void onPostExecute(Void aVoid) {
             if (player != null)
-                player.playMedia(Uri.parse("http://localhost:2224/cache/a.webm"));
+                player.playMedia(Uri.parse("http://localhost:2224/cache/a.webm"), null);
         }
     }
 

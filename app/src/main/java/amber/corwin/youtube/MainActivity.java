@@ -159,11 +159,11 @@ public class MainActivity extends Activity {
 
             OnReceivedUrl cont = pendingCalls.get(watchUrl);
             if (cont != null) {
-                cont.receivedUrl(watchUrl, type, mediaUrl);     // initiated by requestStream
+                cont.receivedUrl(watchUrl, type, mediaUrl);        // initiated by requestStream
                 pendingCalls.remove(watchUrl);
             }
             else
-                player.playMedia(Uri.parse(mediaUrl));          // initiated by JS
+                player.playMedia(Uri.parse(mediaUrl), Uri.parse(watchUrl));   // initiated by JS
         }
         @JavascriptInterface
         public void setVolume(int level, int max) {
@@ -177,6 +177,16 @@ public class MainActivity extends Activity {
         public void resume() { player.resume(); }
         @JavascriptInterface
         public void pause() { player.pause(); }
+        @JavascriptInterface
+        public int getPosition() {
+            PlaybackPosition pos = player.getPosition();
+            return (pos == null) ? 0 : pos.pos;
+        }
+        @JavascriptInterface
+        public int getDuration() {
+            PlaybackPosition pos = player.getPosition();
+            return (pos == null) ? 0 : pos.duration;
+        }
     }
 
     public void jsCall(String json) {
