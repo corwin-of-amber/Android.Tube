@@ -3,7 +3,9 @@ package amber.corwin.youtube;
 import android.app.Activity;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.audiofx.LoudnessEnhancer;
 import android.net.Uri;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -21,6 +23,8 @@ public class Player {
 
     static final String TAG = "Player";
 
+    static private int MEDIA_PLAYER_RELEASE_DELAY = 3 * 60 * 1000;
+
     private Activity context;
 
     private MediaPlayer mediaPlayer;
@@ -32,6 +36,7 @@ public class Player {
     private Playlist playlist;
     private Uri nowPlaying;
     private boolean isPrepared;
+    private LoudnessEnhancer loud;
 
     private UriHandler uriHandler = null;
 
@@ -65,11 +70,7 @@ public class Player {
 
     private MediaPlayer setup() {
         Log.d(TAG, "player setup");
-        if (mediaPlayer != null) {
-            if (mediaPlayer.isPlaying()) mediaPlayer.stop();
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
+        cleanup();
 
         MediaPlayer player = new MediaPlayer();
         player.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -83,6 +84,7 @@ public class Player {
         assert mediaPlayer == null;
         mediaPlayer = player;
         isPrepared = false;
+        loud = null;
 
         player.setVolume(volume, volume);
         player.prepareAsync();
@@ -170,9 +172,7 @@ public class Player {
 
     private void playerError(String msg) {
         Toast.makeText(this.context, msg, Toast.LENGTH_LONG).show();
-        if (mediaPlayer != null) mediaPlayer.release();
-        mediaPlayer = null;
-        nowPlaying = null;
+        cleanup();
     }
 
     public void playFromList(Playlist playlist) {
@@ -234,6 +234,37 @@ public class Player {
 
     public Playlist.Track getCurrentTrack() {
         return (playlist == null) ? null : playlist.current();
+    }
+
+    public void amplify(int millibels) {
+        if (mediaPlayer != null) {
+            if (loud == null) {
+                loud = new LoudnessEnhancer(
+                        mediaPlayer.getAudioSessionId());
+            }
+            loud.setTargetGain(millibels);
+        }
+    }
+
+    private void cleanup() {
+        if (mediaPlayer != null) {
+            mediaPlayer.setOnPreparedListener(null);
+            mediaPlayer.setOnErrorListener(null);
+            if (mediaPlayer.isPlaying()) mediaPlayer.stop();
+            queueRelease(mediaPlayer);
+        }
+        mediaPlayer = null;
+        nowPlaying = null;
+        loud = null;
+    }
+
+    private void queueRelease(final MediaPlayer player) {
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                player.release();
+            }
+        }, MEDIA_PLAYER_RELEASE_DELAY);
     }
 
     private void onVideoReady(MediaPlayer mediaPlayer) {
