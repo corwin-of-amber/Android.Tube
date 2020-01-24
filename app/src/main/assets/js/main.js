@@ -1,9 +1,30 @@
 'use strict';
 
 
-var DEFAULT_MEDIA_TYPE = 
-    (typeof mainActivity !== 'undefined' || typeof server_action !== 'undefined')
-        ? 'video/' : 'audio/';
+var DEFAULT_MEDIA_TYPE = 'audio/';
+/*    (typeof mainActivity !== 'undefined' || typeof server_action !== 'undefined')
+        ? 'video/' : 'audio/';*/
+var PREFERRED_FORMATS = [
+    /^audio[/]webm; opus/
+];
+
+// polyfill
+if (![].findIndex) {
+    Array.prototype.findIndex = function(p) {
+        for (var i = 0; i < p.length; i++)
+            if (p(this[i])) return i;
+        return -1;
+    }
+}
+if (!Object.assign) {
+    Object.assign = function (obj /*, ...*/) {
+        for (let o of arguments) {
+            if (o === obj) continue;
+            for (let k in o) obj[k] = o[k];
+        }
+        return obj;
+    };
+}
 
 
 function watch(urlOrId) {
@@ -37,13 +58,19 @@ function getStream(youtubeUrl, type) {
 
         console.log('ytdl info:');
         console.log(`csn = ${info.csn}`);
-        var n = info.formats.length, i = 0, webm;
+        var n = info.formats.length, i = 0, webm, rank;
         for (let format of info.formats) {
             let ftype = format.mimeType;
             console.log(`format #${++i}/${n}: ${ftype}
                 '${format.url}'`);
-            if (!webm && ftype && ftype.startsWith(type))
-                webm = format;
+            if (ftype && ftype.startsWith(type)) {
+                var r = PREFERRED_FORMATS.findIndex(
+                            function(re) { return re.exec(ftype); });
+                if (!webm || r > rank) {
+                    webm = format;
+                    rank = r;
+                }
+            }
         }
 
         if (webm) return webm;

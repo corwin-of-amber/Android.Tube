@@ -82,11 +82,8 @@ public class MainActivity extends Activity {
                 String scheme = req.getUrl().getScheme();
                 String path = req.getUrl().getPath();
                 if (scheme != null && scheme.equals("file") && path != null) {
-                    if (path.equals("/js/components/playlist.js"))
-                        return new WebResourceResponse("text/javascript", "UTF-8", new ByteArrayInputStream(new byte[0]));
-                    else
-                        return new WebResourceResponse("text/javascript", "UTF-8",
-                                openAsset(path));
+                    return new WebResourceResponse("text/javascript", "UTF-8",
+                            openAsset(path));
                 } else {
                     return super.shouldInterceptRequest(view, req);
                 }

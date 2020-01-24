@@ -1,8 +1,9 @@
+'use strict';
 
 
 Vue.component('playlist-ui', {
     props: ['playlist', 'active'],
-    data: () => ({ dragState: undefined }),
+    data: function() { return { dragState: undefined }; },
     template:
     `
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
@@ -20,11 +21,12 @@ Vue.component('playlist-ui', {
     `,
 
     mounted() {
-        this.$watch('playlist', (playlist) => {
-            if (!playlist.tracks) this.$set(playlist, 'tracks', []);
-            if (!playlist.id)     this.$set(playlist, 'id', Playlist.mkShortId());
+        var self = this;
+        this.$watch('playlist', function(playlist) {
+            if (!playlist.tracks) self.$set(playlist, 'tracks', []);
+            if (!playlist.id)     self.$set(playlist, 'id', Playlist.mkShortId());
         }, {immediate: true});
-        this.$watch('playlist', () => this.store(), {deep: true});
+        this.$watch('playlist', function() { self.store(); }, {deep: true});
     },
     methods: {
         dragOver(ev) {
@@ -71,9 +73,9 @@ Vue.component('playlist-ui', {
 
 class Playlist {
 
-    constructor(name, tracks=[]) {
+    constructor(name, tracks) {
         this.name = name;
-        this.tracks = tracks;
+        this.tracks = tracks || [];
     }
 
     add(item) {
@@ -95,8 +97,8 @@ class Playlist {
         var id = JSON.stringify(item.id),
             itemId = item._playlistItem;
         return itemId
-                ? this.tracks.findIndex(e => e._playlistItem === itemId)
-                : this.tracks.findIndex(e => JSON.stringify(e.id) === id);
+                ? this.tracks.findIndex(function(e) { return e._playlistItem === itemId; })
+                : this.tracks.findIndex(function(e) { return JSON.stringify(e.id) === id; });
     }
 
     static from(props) {
@@ -113,12 +115,14 @@ class Playlist {
 
     store(key) { Playlist.store(this, key); }
 
-    static store(data, key='tube.playlist') {
+    static store(data, key) {
+        key = key || Playlist.DEFAULT_STORAGE_KEY;
         localStorage[key] = JSON.stringify(data);
     }
 
-    static restore(key='tube.playlist') {
-        return Playlist.from(localStorage[key]);
+    static restore(key) {
+        key = key || Playlist.DEFAULT_STORAGE_KEY;
+        return Playlist.from(localStorage && localStorage[key]);
     }
 
     download(filename) {
@@ -128,8 +132,10 @@ class Playlist {
             [0].click();
     }
 
-    static async upload(blob) {
-        return Playlist.from(await blob.text());
+    static upload(blob) {
+        return blob.text().then(function(text) {
+            return Playlist.from(text);
+        });
     }
 
     /**
@@ -139,9 +145,12 @@ class Playlist {
         if (typeof nowPlaying !== 'number')
             nowPlaying = this.indexOf(nowPlaying);
 
-        const mkTrack = track => ({
-            id: track.id.videoId, kind: Playlist.KIND.YOUTUBE,
-            uri: track.id.videoId});
+        const mkTrack = function(track) {
+            return {
+                id: track.id.videoId, kind: Playlist.KIND.YOUTUBE,
+                uri: track.id.videoId
+            };
+        };
 
         return {tracks: this.tracks.map(mkTrack), nowPlaying};
     }
@@ -150,5 +159,8 @@ class Playlist {
         return Math.random().toString(36).slice(2);
     }
 
-    static KIND = {YOUTUBE: 2};
 }
+
+
+Playlist.KIND = {YOUTUBE: 2};
+Playlist.DEFAULT_STORAGE_KEY = 'tube.playlist';
