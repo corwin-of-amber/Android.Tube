@@ -21,6 +21,7 @@ public class Playlist {
         public String id;
         public String kind;
         public Uri uri;
+        public int gain;
     }
 
     List<Track> tracks;
@@ -72,6 +73,7 @@ public class Playlist {
             track.id = jsonTrack.getString("id");
             track.kind = jsonTrack.optString("kind", null);
             track.uri = Uri.parse(jsonTrack.getString("uri"));
+            track.gain = jsonTrack.optInt("gain", 0);
             tracks.add(track);
         }
 

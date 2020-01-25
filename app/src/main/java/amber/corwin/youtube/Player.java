@@ -3,6 +3,7 @@ package amber.corwin.youtube;
 import android.app.Activity;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.audiofx.Equalizer;
 import android.media.audiofx.LoudnessEnhancer;
 import android.net.Uri;
 import android.os.Handler;
@@ -37,6 +38,7 @@ public class Player {
     private Uri nowPlaying;
     private boolean isPrepared;
     private LoudnessEnhancer loud;
+    private Equalizer eqz;
 
     private UriHandler uriHandler = null;
 
@@ -85,6 +87,7 @@ public class Player {
         mediaPlayer = player;
         isPrepared = false;
         loud = null;
+        eqz = null;
 
         player.setVolume(volume, volume);
         player.prepareAsync();
@@ -159,6 +162,8 @@ public class Player {
         playMedia(uri, track.uri);
 
         if (mediaPlayer != null) {
+            if (track.gain != 0)
+                amplify(track.gain);
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
@@ -243,6 +248,17 @@ public class Player {
                         mediaPlayer.getAudioSessionId());
             }
             loud.setTargetGain(millibels);
+            loud.setEnabled(true);
+            /*
+            if (eqz == null)
+                eqz = new Equalizer(0, mediaPlayer.getAudioSessionId());
+            short n = eqz.getNumberOfBands();
+            for (short i = 0; i < n; i++) {
+                int[] freqRange = eqz.getBandFreqRange(i);
+                short[] levelRange = eqz.getBandLevelRange();
+                eqz.setBandLevel(i, (short)millibels);
+            }
+            eqz.setEnabled(true);*/
         }
     }
 
@@ -256,6 +272,7 @@ public class Player {
         mediaPlayer = null;
         nowPlaying = null;
         loud = null;
+        eqz = null;
     }
 
     private void queueRelease(final MediaPlayer player) {

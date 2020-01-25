@@ -20,7 +20,9 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import amber.corwin.youtube.MainActivity;
@@ -43,7 +45,14 @@ public class HTTPD extends NanoWSD {
 
     private FetchTask fetchTask = null;
 
-    public HTTPD(MainActivity context) { super(2224); this.context = context; }
+    public HTTPD(MainActivity context) {
+        super(2224);
+        this.context = context;
+        this.setTempFileManagerFactory(new TempFileManagerFactory() {
+            @Override
+            public TempFileManager create() { return new LaxTempFileManager(); }
+        });
+    }
 
     @Override
     public Response serve(IHTTPSession session) {
@@ -68,10 +77,14 @@ public class HTTPD extends NanoWSD {
             return pause();
         else if (path.equals("/resume"))
             return resume();
+        else if (path.startsWith("/playlists/"))
+            return playlistsItem(session);
         else if (path.startsWith("/fetch"))
             return fetch(session);
         else if (path.startsWith("/cache"))
             return cache(session);
+        else if (path.startsWith("/amplify"))
+            return amplify(session);
         else if (method == Method.POST)
             return handlePost(session);
         else
@@ -149,6 +162,33 @@ public class HTTPD extends NanoWSD {
         catch (JSONException e) { return error("position: " + e); }
     }
 
+    private Response playlistsItem(IHTTPSession session) {
+        String path = session.getUri();
+        Method method = session.getMethod();
+        try {
+            File file = new File(playlistsStorageDir(), basename(path + ".json"));
+
+            if (method.equals(Method.PUT)) {
+                Log.d(TAG, "writing " + file.getAbsolutePath());
+                String content = getRequestData(session, "content");
+
+                if (content == null) return error("empty PUT request");
+
+                new File(content).renameTo(file);
+
+                return ok();
+            }
+            else {
+                InputStream data = new FileInputStream(file);
+                return newFixedLengthResponse(Response.Status.OK,
+                        "text/json", data, file.length());
+            }
+        }
+        catch (IOException e) {
+            return error("write playlist: " + e);
+        }
+    }
+
     private Response fetch(IHTTPSession session) {
         String q = session.getQueryParameterString();
         try {
@@ -175,6 +215,31 @@ public class HTTPD extends NanoWSD {
         }
     }
 
+    private Response amplify(IHTTPSession session) {
+        String q = session.getQueryParameterString();
+        Player player = this.context.player;
+        try {
+            int millibels = Integer.parseInt(q);
+            if (player != null)
+                player.amplify(millibels);
+            return ok();
+        }
+        catch (NumberFormatException e) {
+            return error("bad request 'amplify?" + q + "'");
+        }
+    }
+
+    private Response handlePost(IHTTPSession session) {
+        String postData = getRequestData(session, "postData");
+
+        if (postData == null)
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","missing request body");
+        else if (session.getUri().startsWith("/playlist"))
+            return playlist(postData);
+        else
+            return sendToJS(postData);
+    }
+
     private static class FetchTask extends AsyncTask<URL, Void, Void> {
 
         private File file;
@@ -186,7 +251,7 @@ public class HTTPD extends NanoWSD {
         }
 
         @Override
-        protected Void doInBackground(URL ...urls) {
+        protected Void doInBackground(URL... urls) {
             URL url = urls[0];
             try {
                 try (InputStream cis = url.openStream();
@@ -200,8 +265,7 @@ public class HTTPD extends NanoWSD {
                         Log.d(TAG, "fetch: " + totrd + " bytes");
                     }
                 }
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 Log.e(TAG, "fetch failed", e);
             }
             return null;
@@ -222,7 +286,7 @@ public class HTTPD extends NanoWSD {
         return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", msg);
     }
 
-    private Response handlePost(IHTTPSession session) {
+    private String getRequestData(IHTTPSession session, String key) {
         Map<String, String> files = new HashMap<>();
         try {
             session.parseBody(files);
@@ -230,14 +294,7 @@ public class HTTPD extends NanoWSD {
         catch (IOException e) { Log.e(TAG, "serve: read error", e); }
         catch (ResponseException e) { Log.e(TAG, "serve: bad response", e); }
 
-        String postData = files.get("postData");
-
-        if (postData == null)
-            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","missing request body");
-        else if (session.getUri().startsWith("/playlist"))
-            return playlist(postData);
-        else
-            return sendToJS(postData);
+        return files.get(key);
     }
 
     private Response sendToJS(String req) {
@@ -327,12 +384,49 @@ public class HTTPD extends NanoWSD {
             return new WebSocketConnection(handshake);
     }
 
+    /**
+     * Like NanoHTTPD.DefaultTempFileManager, but does not try to delete files that
+     * have been moved.
+     */
+    class LaxTempFileManager implements TempFileManager {
+
+        private final List<TempFile> tempFiles = new ArrayList<>();
+
+        @Override
+        public void clear() {
+            for (TempFile file : this.tempFiles) {
+                try {
+                    if (new File(file.getName()).exists())
+                        file.delete();
+                } catch (Exception e) {
+                    Log.d(TAG, "could not delete file ", e);
+                }
+            }
+            this.tempFiles.clear();
+        }
+
+        @Override
+        public TempFile createTempFile(String filename_hint) throws Exception {
+            DefaultTempFile tempFile = new DefaultTempFile(cacheDir());
+            this.tempFiles.add(tempFile);
+            return tempFile;
+        }
+    }
+
     private static String basename(String path) {
         return path.substring(path.lastIndexOf('/') + 1);
     }
 
     private File cacheDir() {
         File d = new File(context.getCacheDir(), "music");
+        if (!d.isDirectory() && !d.mkdirs()) {
+            Log.w(TAG, "'" + d.getPath() + "': failed to create directory");
+        }
+        return d;
+    }
+
+    private File playlistsStorageDir() {
+        File d = new File(context.getDir("data", Context.MODE_PRIVATE), "playlists");
         if (!d.isDirectory() && !d.mkdirs()) {
             Log.w(TAG, "'" + d.getPath() + "': failed to create directory");
         }

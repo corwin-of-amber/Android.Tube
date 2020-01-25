@@ -35,6 +35,10 @@ function pos(seek) {
     seek ? get(`/pos?${seek}`) : get("/pos");
 }
 
+function amplify(millibels) {
+    get(`/amplify?${millibels}`);
+}
+
 function post(path, data) {
     if (typeof data !== 'string') data = JSON.stringify(data);
 
@@ -122,6 +126,8 @@ opts.command('master-vol [level] [max]')
     .action((level, max) => { mvol(level && Number(level), max && Number(max)); done = true; });
 opts.command('pos [seek-to]')
     .action((seek) => { pos(seek); done = true; });
+opts.command('amplify <gain>')
+    .action((gain) => { amplify(gain); done = true; });
 
 opts.parse(process.argv);
 
