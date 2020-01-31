@@ -4,11 +4,10 @@
 Vue.component('playlist-ui', {
     props: ['playlist', 'active'],
     data: function() { return { dragState: undefined }; },
-    template:
-    `
+    template: `
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
                 @drop="drop" :class="{['drag-'+dragState]: !!dragState}">
-        <h1 contenteditable="true">{{playlist.name}}</h1>
+        <playlist-caption v-model="playlist.name"/>
         <div>
             <div class="playlist-item" v-for="track in playlist.tracks">
                 <div class="gutter"/>
@@ -70,6 +69,34 @@ Vue.component('playlist-ui', {
     }
 });
 
+Vue.component('playlist-caption', {
+    props: ['value'],
+    template:`
+        <h1 contenteditable="true"
+            @keydown="keydown" @blur="commit">{{value}}</h1>
+    `,
+    methods: {
+        keydown(ev) {
+            switch (ev.key) {
+            case 'Enter':
+                ev.preventDefault();
+                this.commit();  break;
+            case 'Escape':
+                ev.preventDefault();
+                this.rollback();  break;
+            }
+        },
+        commit() {
+            this.$emit('input', this.$el.textContent);
+            this.$el.blur();
+        },
+        rollback() {
+            this.$el.textContent = this.value;
+            this.$el.blur();
+        }
+    }
+});
+
 
 class Playlist {
 
@@ -113,7 +140,13 @@ class Playlist {
         return pl;    
     }
 
-    store(key) { Playlist.store(this, key); }
+    store(key) {
+        Playlist.store(this, key);
+        if (!key && this.id) {
+            // Also store by id
+            Playlist.store(this, Playlist.DEFAULT_STORAGE_KEY + '-' + this.id);
+        }
+    }
 
     static store(data, key) {
         key = key || Playlist.DEFAULT_STORAGE_KEY;
@@ -123,6 +156,10 @@ class Playlist {
     static restore(key) {
         key = key || Playlist.DEFAULT_STORAGE_KEY;
         return Playlist.from(localStorage && localStorage[key]);
+    }
+
+    static restoreFromServer(id) {
+        server_action(`playlists/${id}`).then(console.log);
     }
 
     download(filename) {
