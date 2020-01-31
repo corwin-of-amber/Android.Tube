@@ -7,19 +7,25 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.util.SparseArray;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -77,6 +83,8 @@ public class HTTPD extends NanoWSD {
             return pause();
         else if (path.equals("/resume"))
             return resume();
+        else if (path.equals("/playlists"))
+            return playlistsIndex();
         else if (path.startsWith("/playlists/"))
             return playlistsItem(session);
         else if (path.startsWith("/fetch"))
@@ -160,6 +168,26 @@ public class HTTPD extends NanoWSD {
             return newFixedLengthResponse(Response.Status.OK, "text/json", o.toString());
         }
         catch (JSONException e) { return error("position: " + e); }
+    }
+
+    private Response playlistsIndex() {
+        File dir = playlistsStorageDir();
+        JSONArray o = new JSONArray();
+        for (File item : dir.listFiles()) {
+            JSONObject entry = new JSONObject();
+            try {
+                entry.put("id", noext(item.getName()));
+                entry.put("name", readPlaylistName(item));
+                o.put(entry);
+            }
+            catch (IOException e) {
+                Log.e(TAG, "'" + item.getName() + "': cannot read;", e);
+            }
+            catch (JSONException e) {
+                Log.e(TAG, "'" + item.getName() + "': JSON format error;", e);
+            }
+        }
+        return newFixedLengthResponse(Response.Status.OK, "text/json", o.toString());
     }
 
     private Response playlistsItem(IHTTPSession session) {
@@ -384,6 +412,20 @@ public class HTTPD extends NanoWSD {
             return new WebSocketConnection(handshake);
     }
 
+    private String readPlaylistName(File file) throws IOException, JSONException {
+        return readPlaylist(file).getString("name");
+    }
+
+    private JSONObject readPlaylist(File file) throws IOException, JSONException {
+        // Need to read the JSON file into memory :/
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder();
+        for (String line = null; (line = reader.readLine()) != null;) sb.append(line);
+        reader.close();
+        return new JSONObject(sb.toString());
+    }
+
     /**
      * Like NanoHTTPD.DefaultTempFileManager, but does not try to delete files that
      * have been moved.
@@ -415,6 +457,11 @@ public class HTTPD extends NanoWSD {
 
     private static String basename(String path) {
         return path.substring(path.lastIndexOf('/') + 1);
+    }
+
+    private static String noext(String filename) {
+        int idx = filename.lastIndexOf('.');
+        return idx > 0 ? filename.substring(0, idx) : filename;
     }
 
     private File cacheDir() {
