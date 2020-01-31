@@ -136,7 +136,7 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
-        data: {curPlaying: undefined, playlist: undefined, status: 'ready'},
+        data: {curPlaying: undefined, playlist: undefined, playlists: [], status: 'ready'},
         template: `
             <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
                 <volume-control ref="volume"/>
@@ -145,11 +145,24 @@ $(function() {
                 <playlist-ui v-if="playlist && playlist.show"
                     ref="playlist" :playlist="playlist"
                     @selected="watch" :active="curPlaying"/>
+                <playlist-ui-index :playlists="playlists"
+                    @selected="watchPlaylist" :active="playlist && playlist.id"/>
             </div>
         `,
         mounted() {
+            let self = this;
+
             if (typeof Playlist !== 'undefined')
                 this.playlist = Playlist.restore();
+
+            if (typeof server_action !== 'undefined')
+                server_action('playlists').then(function (resp) {
+                    self.playlists = resp;
+                });
+            
+            this.$refs.controls.$watch('status', function(status) {
+                if (status.track) self.curPlaying = status.track;
+            });
         },
         methods: {
             search(query) {
@@ -168,6 +181,14 @@ $(function() {
                 operation
                     .catch(function() { self.status = 'error'; })
                     .then(function() { self.status = 'playing'; });
+            },
+
+            watchPlaylist(entry) {
+                var self = this;
+                Playlist.loadFromServer(entry.id).then(function(playlist) {
+                    self.playlist = playlist;
+                    watchFromList(playlist.export(0));
+                });
             },
 
             upload(file) {

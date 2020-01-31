@@ -72,8 +72,8 @@ public class MainActivity extends Activity {
 
         Log.i(TAG, "-- start --");
 
-        final String initialMessage =
-                "{\"type\": \"search\", \"text\": \"accidentally in love\"}";
+        final String initialMessage = null;
+                //"{\"type\": \"search\", \"text\": \"accidentally in love\"}";
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -92,8 +92,8 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    //view.postWebMessage(new WebMessage(initialMessage), Uri.EMPTY);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && initialMessage != null) {
+                    view.postWebMessage(new WebMessage(initialMessage), Uri.EMPTY);
                 }
             }
         });
@@ -150,6 +150,13 @@ public class MainActivity extends Activity {
     // ---------------
 
     class JsInterface {
+        @JavascriptInterface
+        public void gettingUrl(String watchUrl) {
+            OnReceivedUrl cont = pendingCalls.get(watchUrl);
+            if (cont == null) {
+                player.clearTrack();
+            }
+        }
         @JavascriptInterface
         public void receivedUrl(String watchUrl, String type, String mediaUrl) {
             Log.i(TAG, mediaUrl + "  (" + type + ")");

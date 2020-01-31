@@ -7,8 +7,9 @@ Vue.component('playlist-ui', {
     template: `
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
                 @drop="drop" :class="{['drag-'+dragState]: !!dragState}">
+        <playlist-toolbox/>
         <playlist-caption v-model="playlist.name"/>
-        <div>
+        <div class="playlist-body">
             <div class="playlist-item" v-for="track in playlist.tracks">
                 <div class="gutter"/>
                 <video-snippet
@@ -71,7 +72,7 @@ Vue.component('playlist-ui', {
 
 Vue.component('playlist-caption', {
     props: ['value'],
-    template:`
+    template: `
         <h1 contenteditable="true"
             @keydown="keydown" @blur="commit">{{value}}</h1>
     `,
@@ -95,6 +96,31 @@ Vue.component('playlist-caption', {
             this.$el.blur();
         }
     }
+});
+
+Vue.component('playlist-toolbox', {
+    template: `
+        <div class='toolbox'>
+            <button name='list'>@</button>
+        </div>
+    `
+});
+
+Vue.component('playlist-ui-index', {
+    props: ['playlists', 'active'],
+    data: function() { return { dragState: undefined }; },
+    template: `
+    <div class="playlist-ui-index">
+        <h1>Playlists</h1>
+        <ul>
+            <li class="playlist-entry" :class="{active: entry.id == active}"
+                    v-for="entry in playlists"
+                    @click="$emit('selected', entry)">
+                <span>{{entry.name}}</span>
+            </li>
+        </ul>
+    </div>
+    `,
 });
 
 
@@ -158,8 +184,8 @@ class Playlist {
         return Playlist.from(localStorage && localStorage[key]);
     }
 
-    static restoreFromServer(id) {
-        server_action(`playlists/${id}`).then(console.log);
+    static loadFromServer(id) {
+        return server_action(`playlists/${id}`).then(Playlist.from);
     }
 
     download(filename) {

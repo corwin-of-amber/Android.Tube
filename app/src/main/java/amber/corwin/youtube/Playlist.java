@@ -17,7 +17,7 @@ import java.util.Random;
 
 public class Playlist {
 
-    static class Track {
+    static public class Track {
         public String id;
         public String kind;
         public Uri uri;

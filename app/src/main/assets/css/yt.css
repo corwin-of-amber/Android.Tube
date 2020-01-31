@@ -32,11 +32,12 @@ body {
 }
 
 #ui-container > div.search-ui,
-#ui-container > div.playlist-ui {
+#ui-container > div.playlist-ui,
+#ui-container > div.playlist-ui-index {
     flex: 1 1 1%;
 }
 
-div.search-ui, div.playlist-ui {
+div.search-ui, div.playlist-ui, div.playlist-ui-index {
     padding: 9px;
     height: 100%;
     overflow: auto;
@@ -44,7 +45,7 @@ div.search-ui, div.playlist-ui {
     direction: rtl;  /* force scrollbar on the left */
 }
 
-div.search-ui > *, div.playlist-ui > * {
+div.search-ui > *, div.playlist-ui > *, div.playlist-ui-index > * {
     direction: ltr;
 }
 
@@ -118,7 +119,7 @@ input[type="range"]:focus {
 }
 
 #search-results,
-.playlist-ui > div {
+.playlist-ui > div.playlist-body {
     margin-right: 30px;  /* room for volume control */
 }
 
@@ -129,7 +130,8 @@ input[type="range"]:focus {
     padding: 9px 2px;
 }
 
-.video-snippet.active {
+.video-snippet.active,
+.playlist-entry.active {
     background: #4747ff;
     color: white;
 }
@@ -206,7 +208,8 @@ button[name="play-pause"] {
     min-width: 20px;    
 }
 
-.playlist-ui h1 {
+.playlist-ui h1,
+.playlist-ui-index h1 {
     font-size: 16px;
     color: #888;
     padding-bottom: 1px;
@@ -220,6 +223,10 @@ button[name="play-pause"] {
     border: none;
     outline: 1px solid grey;
     margin-top: 13px;
+}
+
+.playlist-ui > .toolbox {
+    float: right;
 }
 
 .playlist-ui .playlist-item {
@@ -243,4 +250,33 @@ button[name="play-pause"] {
     background: white;
     margin-top: 0;
     padding-top: 25px;
+}
+
+.toolbox button {
+    border: none;
+    font-size: 20px;
+    color: silver;
+}
+
+.toolbox button:hover {
+    color: #777;
+}
+
+.toolbox button:active {
+    background: #eee;
+}
+
+.playlist-ui-index ul {
+    padding: 0;
+}
+
+.playlist-ui-index ul li {
+    list-style: none;
+    font-size: 15px;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.playlist-ui-index ul li:not(.active):hover {
+    background: #eef;
 }

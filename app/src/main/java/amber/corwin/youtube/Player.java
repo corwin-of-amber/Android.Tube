@@ -35,7 +35,8 @@ public class Player {
     private float volume = 1.0f;
 
     private Playlist playlist;
-    private Uri nowPlaying;
+    private Playlist.Track nowPlaying;
+    private Uri nowPlayingUri;
     private boolean isPrepared;
     private LoudnessEnhancer loud;
     private Equalizer eqz;
@@ -95,7 +96,12 @@ public class Player {
             @Override
             public void onPrepared(MediaPlayer player) {
                 isPrepared = true;
-                player.setOnErrorListener(null);
+                player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                    @Override
+                    public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
+                        Log.e(TAG, "player error " + i + " " + i1); return false;
+                    }
+                });
                 player.start();
             }
         });
@@ -108,7 +114,8 @@ public class Player {
     }
 
     public void playMedia(final Uri uri, Uri originalUri) {
-        this.nowPlaying = (originalUri == null) ? uri : originalUri;
+        this.nowPlaying = null; /* track is set by playTrack if needed */
+        this.nowPlayingUri = (originalUri == null) ? uri : originalUri;
 
         if ("file".equals(uri.getScheme())) {
             playFile(new File(context.getCacheDir(), uri.getPath()));
@@ -147,6 +154,7 @@ public class Player {
     }
 
     void playTrack(final Playlist.Track track) {
+        nowPlaying = track;
         if (track.kind != null && uriHandler != null)
             uriHandler.resolveTrack(track, new UriHandler.Callback() {
                 @Override
@@ -160,6 +168,7 @@ public class Player {
 
     void playTrack(Playlist.Track track, Uri uri) {
         playMedia(uri, track.uri);
+        nowPlaying = track;
 
         if (mediaPlayer != null) {
             if (track.gain != 0)
@@ -173,6 +182,11 @@ public class Player {
                 }
             });
         }
+    }
+
+    void clearTrack() {
+        /* Called when preparing to play non-playlist content */
+        this.nowPlaying = null;
     }
 
     private void playerError(String msg) {
@@ -232,13 +246,14 @@ public class Player {
     }
 
     public void setPosition(int seekTo) {
+        Log.d(TAG, "seek to " + seekTo);
         mediaPlayer.seekTo(seekTo);
     }
 
-    public Uri getCurrentUri() { return nowPlaying; }
+    public Uri getCurrentUri() { return nowPlayingUri; }
 
     public Playlist.Track getCurrentTrack() {
-        return (playlist == null) ? null : playlist.current();
+        return nowPlaying; // (playlist == null) ? null : playlist.current();
     }
 
     public void amplify(int millibels) {
@@ -271,6 +286,7 @@ public class Player {
         }
         mediaPlayer = null;
         nowPlaying = null;
+        nowPlayingUri = null;
         loud = null;
         eqz = null;
     }

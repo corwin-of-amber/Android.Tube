@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const http = require('http');
+const http = require('http'),
+      fs = require('fs');
 
 var BASE = new URL('http://10.0.0.11:2224');
 
@@ -21,6 +22,12 @@ function playlist(filename) {
     post('/playlist', {tracks: readTracks(filename)});
 }
 
+function playlistPut(filename) {
+    var content = fs.readFileSync(filename),
+        id = JSON.parse(content).id;
+    put(`/playlists/${id}`, content);
+}
+
 function search(query) {
     post({type: 'search', text: query});
 }
@@ -39,13 +46,16 @@ function amplify(millibels) {
     get(`/amplify?${millibels}`);
 }
 
-function post(path, data) {
-    if (typeof data !== 'string') data = JSON.stringify(data);
+function post(path, data, method='POST') {
+    if (typeof data === 'object' && !(data instanceof Buffer))
+        data = JSON.stringify(data);
+    if (typeof data === 'string')
+        data = Buffer.from(data);  // so that data.length is in bytes
 
     var req = http.request({
         hostname: BASE.hostname, port: Number(BASE.port || 80),
         path: path,
-        method: 'POST',
+        method: method,
         headers: {
             'Content-Type': 'text/json',
             'Content-Length': data.length
@@ -60,6 +70,10 @@ function post(path, data) {
     
     req.write(data);
     req.end();
+}
+
+function put(path, data, method='PUT') {
+    return post(path, data, method);
 }
 
 function get(path) {
@@ -128,6 +142,8 @@ opts.command('pos [seek-to]')
     .action((seek) => { pos(seek); done = true; });
 opts.command('amplify <gain>')
     .action((gain) => { amplify(gain); done = true; });
+opts.command('upload <filename>')
+    .action((filename) => { playlistPut(filename); done = true; });
 
 opts.parse(process.argv);
 

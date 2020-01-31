@@ -164,7 +164,11 @@ public class HTTPD extends NanoWSD {
             Uri uri = context.player.getCurrentUri();
             if (uri != null)
                 o.put("uri", uri.toString());
+            Playlist.Track track = context.player.getCurrentTrack();
+            if (track != null)
+                o.put("track", track.id);
             o.put("playing", context.player.isPlaying());
+
             return newFixedLengthResponse(Response.Status.OK, "text/json", o.toString());
         }
         catch (JSONException e) { return error("position: " + e); }
@@ -202,9 +206,10 @@ public class HTTPD extends NanoWSD {
 
                 if (content == null) return error("empty PUT request");
 
-                new File(content).renameTo(file);
-
-                return ok();
+                if (new File(content).renameTo(file))
+                    return ok();
+                else
+                    return error("failed to store " + file.getAbsolutePath());
             }
             else {
                 InputStream data = new FileInputStream(file);
@@ -418,12 +423,13 @@ public class HTTPD extends NanoWSD {
 
     private JSONObject readPlaylist(File file) throws IOException, JSONException {
         // Need to read the JSON file into memory :/
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
-        StringBuilder sb = new StringBuilder();
-        for (String line = null; (line = reader.readLine()) != null;) sb.append(line);
+        Reader reader =
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+        char[] buf = new char[(int)file.length()];
+        int rc = reader.read(buf);
+        String content = String.copyValueOf(buf, 0, rc);
         reader.close();
-        return new JSONObject(sb.toString());
+        return new JSONObject(content); //sb.toString());
     }
 
     /**
