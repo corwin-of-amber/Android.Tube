@@ -125,6 +125,7 @@ function action(cmd) {
 
 window.onmessage = function(msg) {
     console.log("message: " + JSON.stringify(msg));
-    action(JSON.parse(msg.data));
+    if (msg.data)
+        action(JSON.parse(msg.data));
 };
 /*watch('https://www.youtube.com/watch?v=mBnkvdM56XQ');*/

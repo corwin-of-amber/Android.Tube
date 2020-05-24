@@ -28,6 +28,11 @@ function playlistPut(filename) {
     put(`/playlists/${id}`, content);
 }
 
+function upload(filename, thenPlay) {
+    if (filename.endsWith('.json')) playlistPut(filename);
+    else uploadFile(filename, thenPlay);
+}
+
 function search(query) {
     post({type: 'search', text: query});
 }
@@ -42,8 +47,37 @@ function pos(seek) {
     seek ? get(`/pos?${seek}`) : get("/pos");
 }
 
-function amplify(millibels) {
-    get(`/amplify?${millibels}`);
+async function status() {
+    var json;
+    try {
+        json = await get('/status', false);
+    }
+    catch (e) { return; }
+
+    console.log(JSON.parse(json));
+}
+
+function waitToFinishPlaying() {
+    return new Promise((resolve, reject) => {
+        var iv = setInterval(async () => {
+            try {
+                var st = JSON.parse(await get('/status', false)),
+                    p = st.position,
+                    msg = `${st.playing ? '▶︎' : ' '} ${p && p.pos || '??'}/${p && p.duration || '??'}`;
+                
+                process.stderr.write(`\r${msg}       \r${msg}`, );
+                if (!p) reject()
+                else if (!st.playing && st.position.pos >= st.position.duration) {
+                    clearInterval(iv); resolve();
+                }
+            }
+            catch (e) { console.log(e); }
+        }, 1000);
+    });
+}
+
+function fetch(url) {
+    get(`/fetch?${url}`);
 }
 
 function post(path, data, method='POST') {
@@ -76,21 +110,49 @@ function put(path, data, method='PUT') {
     return post(path, data, method);
 }
 
-function get(path) {
-    var req = http.request({
-        hostname: BASE.hostname, port: Number(BASE.port || 80),
-        path: path,
-        method: path.includes('?') ? 'POST' : 'GET'
-    }, (res) => {
-         res.pipe(process.stdout);
-     });
+function get(path, echo=true) {
+    var buf = '';
 
-    req.on('error', (e) => {
-        console.error(`problem with request '${path}': ${e.message}`);
+    return new Promise((resolve, reject) => {
+        var req = http.request({
+            hostname: BASE.hostname, port: Number(BASE.port || 80),
+            path: path,
+            method: path.includes('?') ? 'POST' : 'GET'
+        }, (res) => {
+            res.on('data', d => buf += d);
+            res.on('end', () => { if (echo) console.log(buf); resolve(buf); });
+        });
+
+        req.on('error', (e) => {
+            console.error(`problem with request '${path}': ${e.message}`);
+            if (!echo) reject(e);
+        });
+
+        req.end();
     });
-
-    req.end();
 }
+
+function uploadFile(filename, thenPlay) {   // via WebSocket
+    const WebSocket = require('ws');
+
+    var ws = new WebSocket(new URL(`cache/c`, BASE).href),
+        done = false;
+    ws.once('open', () => {
+        console.log('open', ws.url);
+        ws.send(fs.readFileSync(filename));
+        var iv = setInterval(function() {
+            console.log(ws.bufferedAmount);
+            if (ws.bufferedAmount === 0) {
+                clearInterval(iv); ws.close(); done = true;
+            }
+        }, 500);
+    });
+    ws.once('close', () => {
+        console.log('close');
+        if (done && thenPlay) play('file:///music/c');
+    });
+}
+
 
 function readTracks(filename) {
     const fs = require('fs');
@@ -105,7 +167,7 @@ function readTracks(filename) {
 function toURI(url) {
     // if url is a filename, translate to http address using URL table
     if (!url.match(/^https?:/)) {
-        var urls = require('./data/urls.json');
+        var urls = {}; //require('./data/urls.json');
         for (let k in urls) {
             if (url.startsWith(k)) {
                 url = urls[k] + url.slice(k.length);
@@ -127,11 +189,13 @@ opts.command('play <urls...>')
 opts.command('playlist <filename>')
     .action((filename) => { playlist(filename); done = true; })
 opts.command('stop')
-    .action((text) => { pause(); done = true; });
+    .action(() => { pause(); done = true; });
 opts.command('pause')
-    .action((text) => { pause(); done = true; });
+    .action(() => { pause(); done = true; });
 opts.command('resume')
-    .action((text) => { resume(); done = true; });
+    .action(() => { resume(); done = true; });
+opts.command('status')
+    .action(() => { status(); done = true; });
 opts.command('search <text>')
     .action((text) => { search(text); done = true; });
 opts.command('vol [level] [max]')
@@ -140,10 +204,14 @@ opts.command('master-vol [level] [max]')
     .action((level, max) => { mvol(level && Number(level), max && Number(max)); done = true; });
 opts.command('pos [seek-to]')
     .action((seek) => { pos(seek); done = true; });
-opts.command('amplify <gain>')
-    .action((gain) => { amplify(gain); done = true; });
-opts.command('upload <filename>')
-    .action((filename) => { playlistPut(filename); done = true; });
+opts.command('wait')
+    .action(() => { waitToFinishPlaying(); done = true; });
+opts.command('upload -p <filename>')
+    .option('-p,--play', 'start playing after upload')
+    .action((filename, o) => { upload(filename, o.play); console.log(o.play); done = true; });
+
+opts.command('fetch <url>')
+    .action((url) => { fetch(url); done = true; });
 
 opts.parse(process.argv);
 

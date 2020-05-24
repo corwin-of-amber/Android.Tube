@@ -16,3 +16,6 @@
 /music
 /*.app
 *.jar
+.*.swp
+gradlew
+gradlew.bat

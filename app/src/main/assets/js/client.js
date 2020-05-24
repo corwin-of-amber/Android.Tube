@@ -55,8 +55,8 @@ function play(mediaUrl) {
  */
 class WebSocketConnection {
 
-    constructor(path) {
-        this.ws = new WebSocket(`ws://${location.host}/${path}`);
+    constructor(path, host=location.host) {
+        this.ws = new WebSocket(`ws://${host}/${path}`);
     }
 
     upload(file) {
