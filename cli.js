@@ -139,7 +139,7 @@ function uploadFile(filename, thenPlay) {   // via WebSocket
         done = false;
     ws.once('open', () => {
         console.log('open', ws.url);
-        ws.send(fs.readFileSync(filename));
+        fs.createReadStream(filename).on('data', chunk => ws.send(chunk));
         var iv = setInterval(function() {
             console.log(ws.bufferedAmount);
             if (ws.bufferedAmount === 0) {
@@ -208,7 +208,7 @@ opts.command('wait')
     .action(() => { waitToFinishPlaying(); done = true; });
 opts.command('upload -p <filename>')
     .option('-p,--play', 'start playing after upload')
-    .action((filename, o) => { upload(filename, o.play); console.log(o.play); done = true; });
+    .action((filename, o) => { upload(filename, o.play); done = true; });
 
 opts.command('fetch <url>')
     .action((url) => { fetch(url); done = true; });

@@ -75,6 +75,8 @@ public class MainActivity extends Activity {
         final String initialMessage = null;
                 //"{\"type\": \"search\", \"text\": \"accidentally in love\"}";
 
+        webView.getSettings().setUserAgentString("Mozilla"); // avoid getting mobile-targeted pages
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(final WebView view, WebResourceRequest req) {

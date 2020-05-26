@@ -10,9 +10,7 @@ import android.util.SparseArray;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -23,6 +21,7 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.Reader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -225,7 +224,7 @@ public class HTTPD extends NanoWSD {
     private Response fetch(IHTTPSession session) {
         String q = session.getQueryParameterString();
         try {
-            fetchTask = new FetchTask(cacheDir(), context.player);
+            fetchTask = new FetchTask(new File(cacheDir(), "a.webm"));
             fetchTask.execute(new URL(q));
             return ok();
         }
@@ -273,21 +272,23 @@ public class HTTPD extends NanoWSD {
             return sendToJS(postData);
     }
 
-    private static class FetchTask extends AsyncTask<URL, Void, Void> {
+    public static class FetchTask extends AsyncTask<URL, Void, Void> {
 
         private File file;
-        private Player player;
 
-        FetchTask(File dir, Player player) {
-            file = new File(dir, "a.webm");
-            this.player = player;
+        FetchTask(File file) {
+            this.file = file;
         }
 
         @Override
         protected Void doInBackground(URL... urls) {
             URL url = urls[0];
             try {
-                try (InputStream cis = url.openStream();
+                HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+                int rc = conn.getResponseCode();
+                Log.d(TAG, "GET " + url + " - " + rc);
+
+                try (InputStream cis = conn.getInputStream();
                      OutputStream fos = new FileOutputStream(file)) {
 
                     byte[] buf = new byte[4096];
@@ -302,12 +303,6 @@ public class HTTPD extends NanoWSD {
                 Log.e(TAG, "fetch failed", e);
             }
             return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            if (player != null)
-                player.playMedia(Uri.parse("http://localhost:2224/cache/a.webm"), null);
         }
     }
 
@@ -393,7 +388,7 @@ public class HTTPD extends NanoWSD {
         Log.d(TAG, "websocket incoming [" + path + "]");
 
         if (path.startsWith("/cache/")) {
-            FileStoreWebSocketConnection ws = new FileStoreWebSocketConnection(
+            return new FileStoreWebSocketConnection(
                     handshake, new File(cacheDir(), basename(path)));
 
             /*
@@ -410,8 +405,6 @@ public class HTTPD extends NanoWSD {
                 }
             });
             */
-
-            return ws;
         }
         else
             return new WebSocketConnection(handshake);
