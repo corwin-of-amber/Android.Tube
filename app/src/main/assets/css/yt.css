@@ -118,8 +118,9 @@ input[type="range"]:focus {
     line-height: 17px;
 }
 
-#search-results,
-.playlist-ui > div.playlist-body {
+.search-ui.ui-rightmost > #search-results,
+.playlist-ui.ui-rightmost > div.playlist-body,
+.playlist-ui-index.ui-rightmost > ul {
     margin-right: 30px;  /* room for volume control */
 }
 

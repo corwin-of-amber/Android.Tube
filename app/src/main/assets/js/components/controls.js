@@ -112,61 +112,55 @@ Vue.component('control-panel', {
 });
 
 
+class AndroidAppPlayerControls {
+    setVolume(level, max) {
+        mainActivity.setVolume(level, max);
+    }
+    getPosition(cb) {
+        cb({pos: mainActivity.getPosition(),
+            duration: mainActivity.getDuration()});
+    }
+    resume() { mainActivity.resume(); return true; }
+    pause() { mainActivity.pause(); return true; }
+}
+
+
+class InPagePlayerControls {
+    getStatus(cb) {
+        var a = $('audio')[0], track = $('audio').data('track')
+        this.getPosition(function(pos) {
+            cb({position: pos, playing: a && !a.paused, track: track});
+        });
+    }
+    getPosition(cb) {
+        var a = $('audio')[0];
+        cb(a ? {pos: a.currentTime * 1000, duration: a.duration * 1000}
+             : {pos: 0, duration: 0});
+    }
+    seek(pos) {
+        var a = $('audio')[0];
+        if (a) a.currentTime = pos / 1000;
+    }
+    resume() {
+        var a = $('audio')[0];
+        if (a) a.play();
+        return !!a;
+    }
+    pause() {
+        var a = $('audio')[0];
+        if (a) a.pause();
+        return !!a;
+    }
+}
+
 var controls;
 
 if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
-    controls = {
-        setVolume(level, max) {
-            mainActivity.setVolume(level, max);
-        },
-        getPosition(cb) {
-            cb({pos: mainActivity.getPosition(),
-                duration: mainActivity.getDuration()});
-        },
-        resume() { mainActivity.resume(); return true; },
-        pause() { mainActivity.pause(); return true; }
-    }
+    controls = new AndroidAppPlayerControls();
 }
-else if (typeof server_action !== 'undefined') {  /* In client browser */
-    controls = {
-        setVolume(level, max) {
-            server_action('vol?' + level + '/' + max);
-        },
-        getStatus(cb) {
-            server_action('status').then(cb);
-        },
-        getPosition(cb) {
-            server_action('pos').then(function(res) {
-                var pos_dur = res.split('/');
-                cb({pos: Number(pos_dur[0]), duration: Number(pos_dur[1])});
-            });
-        },
-        seek(pos) {
-            if (pos)
-                server_action(`pos?${pos}`);
-        },
-        resume() { server_action('resume'); return true; },
-        pause() { server_action('pause'); return true; }
-    };
+else if (typeof ClientPlayerControls !== 'undefined') {  /* In client browser */
+    controls = new ClientPlayerControls();
 }
 else {                                     /* In NWjs standalone app */
-    var a;
-    controls = {
-        getPosition(cb) {
-            a = $('audio')[0];
-            cb(a ? {pos: a.currentTime * 1000, duration: a.duration * 1000}
-                 : {pos: 0, duration: 0});
-        },
-        seek(pos) {
-            if (a = $('audio')[0]) a.currentTime = pos / 1000;
-        },
-        resume() {
-            if (a = $('audio')[0]) a.play();
-            return !!a;
-        },
-        pause() {
-            if (a = $('audio')[0]) a.pause();
-            return !!a;
-        }
-    }
+    controls = new InPagePlayerControls();
 }

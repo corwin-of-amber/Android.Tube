@@ -27,86 +27,73 @@ if (!Object.assign) {
 }
 
 
-function watch(urlOrId) {
-    if (typeof server_action !== 'undefined') {
-        server_action({type: 'watch', url: urlOrId}).then(function(status) {
-            console.log(status);
-            if (status !== 'ok') throw new Error(status);
-        });
+class YtdlPlayerCore {
+    watch(urlOrId) {
+        var self = this;
+        return this.getWatchUrl(urlOrId).then(
+            function(webm) { self.playStream(urlOrId, webm); });
     }
-    else {
-        return getWatchUrl(urlOrId).then(function(webm) {
-            if (typeof mainActivity === 'undefined')
-                play(webm.url, webm.mimeType);
-            else
-                mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
-        });
+
+    getWatchUrl(urlOrId) {
+        console.log(urlOrId, ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId));
+        if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId))
+            return this.getStream(urlOrId);
+        else return Promise.resolve({url: urlOrId, type: 'unknown'});
     }
-}
 
-function getWatchUrl(urlOrId) {
-    console.log(urlOrId, ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId));
-    if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId))
-        return getStream(urlOrId);
-    else return Promise.resolve({url: urlOrId, type: 'unknown'});
-}
+    playStream(urlOrId, webm) {
+        if (typeof mainActivity === 'undefined')
+            playInPage(urlOrId, webm.url, webm.mimeType);
+        else
+            mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
+    }
 
-function getStream(youtubeUrl, type) {
-    type = type || DEFAULT_MEDIA_TYPE;
-    return ytdl.getInfo(youtubeUrl).then(function (info) {
-        if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
-
-        console.log('ytdl info:');
-        console.log(`csn = ${info.csn}`);
-        var n = info.formats.length, i = 0, webm, rank;
-        for (let format of info.formats) {
-            let ftype = format.mimeType;
-            console.log(`format #${++i}/${n}: ${ftype}
-                '${format.url}'`);
-            if (ftype && ftype.startsWith(type)) {
-                var r = PREFERRED_FORMATS.findIndex(
-                            function(re) { return re.exec(ftype); });
-                if (!webm || r > rank) {
-                    webm = format;
-                    rank = r;
+    getStream(youtubeUrl, type) {
+        type = type || DEFAULT_MEDIA_TYPE;
+        return ytdl.getInfo(youtubeUrl).then(function (info) {
+            if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
+    
+            console.log('ytdl info:');
+            console.log(`csn = ${info.csn}`);
+            var n = info.formats.length, i = 0, webm, rank;
+            for (let format of info.formats) {
+                let ftype = format.mimeType;
+                console.log(`format #${++i}/${n}: ${ftype}
+                    '${format.url}'`);
+                if (ftype && ftype.startsWith(type)) {
+                    var r = PREFERRED_FORMATS.findIndex(
+                                function(re) { return re.exec(ftype); });
+                    if (!webm || r > rank) {
+                        webm = format;
+                        rank = r;
+                    }
                 }
             }
-        }
-
-        if (webm) return webm;
-        else throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
-    })
-    .catch(function(err) {
-        console.error('ytdl error:\n' + err);
-    });
+    
+            if (webm) return webm;
+            else throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
+        })
+        .catch(function(err) {
+            console.error('ytdl error:\n' + err);
+        });
+    }    
 }
 
-function play(mediaUrl, mediaType) {
+var playerCore = new YtdlPlayerCore();
+
+
+function playInPage(track, mediaUrl, mediaType) {
     console.log(mediaType);
-    var v = $('<audio>').attr('controls', true);
-    v.append($('<source>').attr('src', mediaUrl));
-    $('#video-area').html(v);
+    var a = $('<audio>').attr('controls', true);
+    a.data('track', track);
+    a.append($('<source>').attr('src', mediaUrl));
+    $('#video-area').html(a);
 }
 
-var lastSearchResults = undefined;
-
-function showSearchResults(results) {
-    lastSearchResults = results;
-    $('body').empty();
-    for (let item of results.items) {
-        if (item.id.kind === 'youtube#video') {
-            var p = $('<p>').html(item.snippet.title);
-            p.click(function() {
-                watch(item.id.videoId);
-            });
-            $('body').append(p);
-        }
-    }
-}
 
 function action(cmd) {
     switch (cmd.type) {
-    case 'watch':    return watch(cmd.url); break;
+    case 'watch':    return playerCore.watch(cmd.url); break;
     case 'search':   return app.search(cmd.text); break;
     case 'details':  return yapi.details(cmd.videoId); break;
     case 'request':

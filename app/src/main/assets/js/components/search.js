@@ -172,11 +172,11 @@ $(function() {
                 var self = this, operation;
                 this.status = 'pending';
                 this.curPlaying = item.id.videoId;
-                if (this.playlist && item._playlist === this.playlist.id && typeof watchFromList !== 'undefined') {
-                    operation = watchFromList(this.playlist.export(item));
+                if (this.playlist && item._playlist === this.playlist.id && playerCore.watchFromList) {
+                    operation = playerCore.watchFromList(this.playlist.export(item));
                 }
                 else {
-                    operation = watch(this.curPlaying);
+                    operation = playerCore.watch(this.curPlaying);
                 }
                 operation
                     .catch(function() { self.status = 'error'; })

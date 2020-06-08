@@ -24,22 +24,45 @@ function server_action(cmd, path='/', responseType='text') {
     });
 }
 
-if (typeof yapi === 'undefined') {
-    yapi = server_action;
-
-    yapi.search = (query) => server_action({type: 'search', text: query}, '/', 'json');
-    yapi.details = (videoId) => server_action({type: 'details', videoId}, '/', 'json');
+class ClientYouTubeSearch {
+    search(query) {
+        return server_action({type: 'search', text: query}, '/', 'json');
+    }
+    details(videoId) {
+        return server_action({type: 'details', videoId}, '/', 'json');
+    }
 }
 
-// overrides global :/
-async function watch(url) {
-    var status = await server_action({type: 'watch', url});
-    if (status !== 'ok') throw new Error(status);
+class ClientPlayerCore {
+    async watch(url) {
+        var status = await server_action({type: 'watch', url});
+        if (status !== 'ok') throw new Error(status);
+    }
+    async watchFromList(playlist) {
+        var status = await server_action(playlist, '/playlist');
+        if (status !== 'ok') throw new Error(status);
+    }
 }
 
-async function watchFromList(playlist) {
-    var status = await server_action(playlist, '/playlist');
-    if (status !== 'ok') throw new Error(status);
+class ClientPlayerControls {
+    setVolume(level, max) {
+        server_action('vol?' + level + '/' + max);
+    }
+    getStatus(cb) {
+        server_action('status').then(cb);
+    }
+    getPosition(cb) {
+        server_action('pos').then(function(res) {
+            var pos_dur = res.split('/');
+            cb({pos: Number(pos_dur[0]), duration: Number(pos_dur[1])});
+        });
+    }
+    seek(pos) {
+        if (pos)
+            server_action(`pos?${pos}`);
+    }
+    resume() { server_action('resume'); return true; }
+    pause() { server_action('pause'); return true; }
 }
 
 
