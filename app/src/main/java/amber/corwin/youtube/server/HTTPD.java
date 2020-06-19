@@ -166,6 +166,13 @@ public class HTTPD extends NanoWSD {
             Playlist.Track track = context.player.getCurrentTrack();
             if (track != null)
                 o.put("track", track.id);
+            Player.Error error = context.player.getLastError();
+            if (error != null) {
+                JSONObject e = new JSONObject();
+                e.put("msg", error.msg);
+                if (error.track != null) e.put("track", error.track.id);
+                o.put("error", e);
+            }
             o.put("playing", context.player.isPlaying());
 
             return newFixedLengthResponse(Response.Status.OK, "text/json", o.toString());

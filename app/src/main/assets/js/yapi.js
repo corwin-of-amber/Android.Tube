@@ -40,8 +40,6 @@ class YouTubeSearch {
     }
 }
 
-var yapi = new YouTubeSearch();
-
 
 function memoize1(func) {
     var memo = {};

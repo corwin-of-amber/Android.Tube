@@ -43,6 +43,8 @@ public class Player {
 
     private UriHandler uriHandler = null;
 
+    private Error error = null;
+
     Player(Activity context) {
         this.context = context;
     }
@@ -114,6 +116,7 @@ public class Player {
     }
 
     public void playMedia(final Uri uri, Uri originalUri) {
+        this.error = null;
         this.nowPlaying = null; /* track is set by playTrack if needed */
         this.nowPlayingUri = (originalUri == null) ? uri : originalUri;
 
@@ -190,6 +193,7 @@ public class Player {
     }
 
     private void playerError(String msg) {
+        this.error = new Error(msg, this.nowPlaying);
         Toast.makeText(this.context, msg, Toast.LENGTH_LONG).show();
         cleanup();
     }
@@ -255,6 +259,8 @@ public class Player {
     public Playlist.Track getCurrentTrack() {
         return nowPlaying; // (playlist == null) ? null : playlist.current();
     }
+
+    public Error getLastError() { return error; }
 
     public void amplify(int millibels) {
         if (mediaPlayer != null) {
@@ -329,6 +335,15 @@ public class Player {
 
         interface Callback {
             void resolved(Uri uri);
+        }
+    }
+
+    public static class Error {
+        public String msg;
+        public Playlist.Track track;
+        Error(String msg, Playlist.Track track) {
+            this.msg = msg;
+            this.track = track;
         }
     }
 

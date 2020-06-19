@@ -37,16 +37,17 @@ Vue.component('position-bar', {
 
 
 Vue.component('play-pause-button', {
-    data: function() { return {playing: false}; },
+    data: function() { return {playing: false, error: undefined}; },
     template: `
         <button name="play-pause" @click="toggle">{{caption}}</button>
     `,
     computed: {
-        caption() { return this.playing ? "❙❙" : "▶︎"}
+        caption() { return this.error ? "×" : this.playing ? "❙❙" : "▶︎"}
     },
     mounted() {
         var self = this;
         this.$parent.$watch('status', function(s) {
+            self.error = s.error;
             if (s.playing != undefined) self.playing = s.playing;
         });
     },

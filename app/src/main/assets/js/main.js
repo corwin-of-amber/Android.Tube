@@ -58,8 +58,12 @@ class YtdlPlayerCore {
             var n = info.formats.length, i = 0, webm, rank;
             for (let format of info.formats) {
                 let ftype = format.mimeType;
-                console.log(`format #${++i}/${n}: ${ftype}
-                    '${format.url}'`);
+                console.log(`format #${++i}/${n}: ${ftype}\n` +
+                    `        '${format.url}'`);
+                if (!format.url) {
+                    console.warn(`        missing url (${JSON.stringify(format)})`);
+                    continue;
+                }
                 if (ftype && ftype.startsWith(type)) {
                     var r = PREFERRED_FORMATS.findIndex(
                                 function(re) { return re.exec(ftype); });
@@ -79,7 +83,16 @@ class YtdlPlayerCore {
     }    
 }
 
-var playerCore = new YtdlPlayerCore();
+var playerCore, yapi;
+
+if (typeof ClientPlayerCore !== 'undefined') {  /* In client browser */
+    playerCore = new ClientPlayerCore();
+    yapi = new ClientYouTubeSearch();
+}
+else {
+    playerCore = new YtdlPlayerCore();
+    yapi = new YouTubeSearch();
+}
 
 
 function playInPage(track, mediaUrl, mediaType) {
