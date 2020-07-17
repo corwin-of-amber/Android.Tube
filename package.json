@@ -16,7 +16,7 @@
         "commander": "^3.0.2",
         "concat-stream": "^2.0.0",
         "jquery": "^3.5.1",
-        "lodash": "^4.17.15",
+        "lodash": "^4.17.19",
         "vue": "^2.6.11",
         "ws": "^7.3.0",
         "ytdl-core": "^2.1.7"
