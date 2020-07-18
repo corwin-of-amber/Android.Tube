@@ -124,8 +124,8 @@ function action(cmd) {
 }
 
 window.onmessage = function(msg) {
-    console.log("message: " + JSON.stringify(msg));
-    if (msg.data)
+    console.log("message: " + JSON.stringify(msg), msg.data);
+    if (typeof msg.data === 'string')
         action(JSON.parse(msg.data));
 };
 /*watch('https://www.youtube.com/watch?v=mBnkvdM56XQ');*/

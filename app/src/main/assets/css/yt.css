@@ -282,3 +282,10 @@ button[name="play-pause"] {
 .playlist-ui-index ul li:not(.active):hover {
     background: #eef;
 }
+
+.upload-progress {
+    position: absolute;
+    bottom: 15px;
+    left: 5px;
+    background: #fffffff8;
+}

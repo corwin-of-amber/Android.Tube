@@ -42,6 +42,18 @@ class ClientPlayerCore {
         var status = await server_action(playlist, '/playlist');
         if (status !== 'ok') throw new Error(status);
     }
+    async upload(file, progress) {
+        console.log(`%cupload %c${file.name} [${file.type}]`, "color: #f99", "color: #f33");
+        var host = SERVER.length ? new URL(SERVER).host : undefined,
+            w = new WebSocketConnection('cache/a', host);
+        if (progress) w.uploadProgress = progress;
+        await w.upload(file);
+        console.log('%cupload finished.', "color: #f99"); 
+        playerCore.watch('file:///music/a');
+    }
+    playlists() {
+        return server_action('playlists');
+    }
 }
 
 class ClientPlayerControls {
@@ -86,15 +98,17 @@ class WebSocketConnection {
 
     constructor(path, host=location.host) {
         this.ws = new WebSocket(`ws://${host}/${path}`);
+        this.uploadProgress = ({total, uploaded}) => {};
     }
 
     upload(file) {
-        var self = this;
-        return new Promise(function(resolve) {
+        var self = this, error;
+        this.uploadSize = file.size;
+        return new Promise(function(resolve, reject) {
             self.ws.onopen = function() { self.sendChunked(file); }
+            self.ws.onerror = function(e) { error = e; reject(e); }
             self.ws.onclose = function() {
-                console.log('%cupload finished.', "color: #f99"); 
-                resolve('file:///music/a');  // TODO
+                if (!error) { resolve(); }
             }
         });
     }
@@ -112,7 +126,12 @@ class WebSocketConnection {
 
     monitorProgress() {
         var ws = this.ws;
-        var iv = setInterval(function() { console.log(ws.bufferedAmount); }, 500);
+        var iv = setInterval(() => {
+            console.log(ws.bufferedAmount); 
+            if (!this.uploadProgress) this.uploadProgress = ws.bufferedAmount;
+            var uploaded = Math.max(0, this.uploadSize - ws.bufferedAmount);
+            this.uploadProgress({total: this.uploadSize, uploaded})
+        }, 500);
         ws.addEventListener('close', function() { clearInterval(iv); });
     }
 }
