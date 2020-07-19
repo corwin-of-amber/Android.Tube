@@ -45,6 +45,12 @@ class ClientPlayerCore {
 }
 
 class ClientPlayerControls {
+    getVolume(cb) {
+        server_action('vol').then(function(res) {
+            var mo = res.match(/^(\d+)[/](\d+)/);
+            if (mo) cb({level: +mo[1], max: +mo[2]})
+        });
+    }
     setVolume(level, max) {
         server_action('vol?' + level + '/' + max);
     }
@@ -54,7 +60,7 @@ class ClientPlayerControls {
     getPosition(cb) {
         server_action('pos').then(function(res) {
             var pos_dur = res.split('/');
-            cb({pos: Number(pos_dur[0]), duration: Number(pos_dur[1])});
+            cb({pos: +pos_dur[0], duration: +pos_dur[1]});
         });
     }
     seek(pos) {

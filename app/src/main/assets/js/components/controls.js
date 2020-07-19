@@ -2,13 +2,22 @@
 Vue.component('volume-control', {
     data: function() { return {level: 500, max: 1000}; },
     template: `
-        <input type="range" class="volume-control" v-model.number="level" min="0" :max="max">
+        <input type="range" class="volume-control"
+            v-model.number="level" min="0" :max="max" @wheel="wheel">
     `,
     mounted() {
         var self = this;
         this.$watch('level', function(level) {
             controls.setVolume(level, self.max);
         });
+        controls.getVolume(function(vol) {
+            self.level = vol.level * self.max / vol.max;
+        });
+    },
+    methods: {
+        wheel(ev) {
+            this.level += ev.deltaY;
+        }
     }
 });
 
@@ -114,6 +123,7 @@ Vue.component('control-panel', {
 
 
 class AndroidAppPlayerControls {
+    getVolume() { /* todo */ }
     setVolume(level, max) {
         mainActivity.setVolume(level, max);
     }
@@ -127,6 +137,8 @@ class AndroidAppPlayerControls {
 
 
 class InPagePlayerControls {
+    getVolume() { /* not implemented */ }
+    setVolume() { /* not implemented */ }
     getStatus(cb) {
         var a = $('audio')[0], track = $('audio').data('track')
         this.getPosition(function(pos) {
