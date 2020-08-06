@@ -5,15 +5,21 @@ var DEFAULT_MEDIA_TYPE = 'audio/';
 /*    (typeof mainActivity !== 'undefined' || typeof server_action !== 'undefined')
         ? 'video/' : 'audio/';*/
 var PREFERRED_FORMATS = [
-    /^audio[/]webm; opus/
+    /^audio[/]webm; codecs="opus"/
 ];
 
 // polyfill
 if (![].findIndex) {
     Array.prototype.findIndex = function(p) {
-        for (var i = 0; i < p.length; i++)
+        for (var i = 0; i < this.length; i++)
             if (p(this[i])) return i;
         return -1;
+    }
+}
+if (![].find) {
+    Array.prototype.find = function(p) {
+        for (var i = 0; i < this.length; i++)
+            if (p(this[i])) return this[i];
     }
 }
 if (!Object.assign) {
@@ -25,17 +31,20 @@ if (!Object.assign) {
         return obj;
     };
 }
+if (!Object.values) {
+    Object.values = function(o) { return Object.keys(o).map(function(k) { return o[k]; })};
+}
 
 
 class YtdlPlayerCore {
     watch(urlOrId) {
         var self = this;
         return this.getWatchUrl(urlOrId).then(
-            function(webm) { self.playStream(urlOrId, webm); });
+            function(webm) { self.playStream(urlOrId, webm); })
+            .catch(function(err) { console.error(err); });
     }
 
     getWatchUrl(urlOrId) {
-        console.log(urlOrId, ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId));
         if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId))
             return this.getStream(urlOrId);
         else return Promise.resolve({url: urlOrId, type: 'unknown'});
@@ -49,6 +58,7 @@ class YtdlPlayerCore {
     }
 
     getStream(youtubeUrl, type) {
+        var self = this;
         type = type || DEFAULT_MEDIA_TYPE;
         return ytdl.getInfo(youtubeUrl).then(function (info) {
             if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
@@ -73,14 +83,39 @@ class YtdlPlayerCore {
                     }
                 }
             }
-    
-            if (webm) return webm;
-            else throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
+
+            if (!webm) throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
+
+            return webm;
         })
         .catch(function(err) {
             console.error('ytdl error:\n' + err);
+            throw err;
+        })
+        .then(function(webm) {
+            // Parse MPD
+            if (webm.url.match(/^https?:[/][/]manifest/)) {
+                return self.getStreamFromMPD(webm.url).then(function (url) {
+                    webm.url = url;
+                    return webm;
+                });
+            }
+            else
+                return webm;
         });
-    }    
+    }
+
+    getStreamFromMPD(url) {
+        return $.ajax(url).then(function (mpd) {
+            for (let u of mpd.match(/>https?:[^<]*/g)) {
+                /** @todo check AdaptationSet.mimeType in XML */
+                return u.substr(1);
+            }
+            throw new Error(`no stream found in MPD '${url}'`);
+        });
+    }
+
+    playlists() { return Promise.resolve([]);  /** @todo */ }
 }
 
 var playerCore, yapi;

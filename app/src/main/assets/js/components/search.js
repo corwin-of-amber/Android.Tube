@@ -174,7 +174,7 @@ $(function() {
                 var self = this, operation;
                 this.status = 'pending';
                 this.curPlaying = item.id.videoId;
-                if (this.playlist && item._playlist === this.playlist.id && playerCore.watchFromList) {
+                if (this.playlist && this.playlist.id && item._playlist === this.playlist.id && playerCore.watchFromList) {
                     operation = playerCore.watchFromList(this.playlist.export(item));
                 }
                 else {

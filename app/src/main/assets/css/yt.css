@@ -87,6 +87,7 @@ input[type="range"]:focus {
 
 #search-box input {
     border: none;
+    width: 1px;
     flex-grow: 1;
     font-size: 16px;
     vertical-align: middle;
@@ -95,6 +96,7 @@ input[type="range"]:focus {
 
 #search-box button {
     width: 24px;
+    flex-grow: 0;
     background: none;
     border: none;
     padding: 0;

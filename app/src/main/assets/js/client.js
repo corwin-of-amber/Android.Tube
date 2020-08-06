@@ -64,7 +64,7 @@ class ClientPlayerControls {
         });
     }
     setVolume(level, max) {
-        server_action('vol?' + level + '/' + max);
+        server_action('vol?' + Math.round(level) + '/' + Math.round(max));
     }
     getStatus(cb) {
         server_action('status').then(cb);

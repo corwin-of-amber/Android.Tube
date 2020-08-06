@@ -1,3 +1,4 @@
+'use strict';
 
 Vue.component('volume-control', {
     data: function() { return {level: 500, max: 1000}; },
