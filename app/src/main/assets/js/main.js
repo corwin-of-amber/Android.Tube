@@ -107,11 +107,13 @@ class YtdlPlayerCore {
 
     getStreamFromMPD(url) {
         return $.ajax(url).then(function (mpd) {
-            for (let u of mpd.match(/>https?:[^<]*/g)) {
-                /** @todo check AdaptationSet.mimeType in XML */
-                return u.substr(1);
-            }
-            throw new Error(`no stream found in MPD '${url}'`);
+            var xml = $(mpd),
+                m = xml.find('AdaptationSet[mimeType="audio/webm"] BaseURL');
+            if (m.length == 0) m = xml.find('BaseURL');
+            if (m.length == 0)
+                throw new Error(`no stream found in MPD '${url}'`);
+            
+            return m.first().text();
         });
     }
 
@@ -120,7 +122,8 @@ class YtdlPlayerCore {
 
 var playerCore, yapi;
 
-if (typeof ClientPlayerCore !== 'undefined') {  /* In client browser */
+if (typeof ClientPlayerCore !== 'undefined'     /* In client browser */
+     && !(location.search && location.search.length)) {
     playerCore = new ClientPlayerCore();
     yapi = new ClientYouTubeSearch();
 }

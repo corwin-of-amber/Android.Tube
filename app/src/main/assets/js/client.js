@@ -4,20 +4,25 @@
 var SERVER = ""
 var JSON_CT = 'text/json; charset=utf-8'
 
-function server_action(cmd, path='/', responseType='text') {
+function server_action(cmd, path='/', responseType='text', method) {
     console.log(cmd);
 
+    var verbose = true;
+
     if (typeof cmd === 'string') {
-        if (cmd.includes('?'))
-            return $.post({url: `${SERVER}/${cmd}`});
-        else
-            return $.get({url: `${SERVER}/${cmd}`});
+        if (!method) method = cmd.includes('?') ? 'POST' : 'GET';
+        path = '/' + cmd; cmd = undefined;
+        verbose = false;
     }
+    else if (!method) { method = 'POST'; }
 
     var url = `${SERVER}${path}`;
     return new Promise(function(resolve, reject) {
-        $.post({url: url, data: JSON.stringify(cmd), contentType: JSON_CT, dataType: responseType})
-        .done(function(data) { console.log('ok', data); resolve(data); })
+        $.ajax({
+            method, url, data: cmd && JSON.stringify(cmd), 
+            contentType: JSON_CT, dataType: responseType
+        })
+        .done(function(data) { verbose && console.log('ok', data); resolve(data); })
         .fail(function(jq, status, err) { console.error(jq, status, err);
             reject(jq.responseJSON || jq.response);
          });
@@ -52,7 +57,10 @@ class ClientPlayerCore {
         playerCore.watch('file:///music/a');
     }
     playlists() {
-        return server_action('playlists');
+        return server_action('playlists', null, 'json');
+    }
+    playlistGet(id) {
+        return server_action(`playlists/${id}`).then(Playlist.from);
     }
 }
 
@@ -67,7 +75,7 @@ class ClientPlayerControls {
         server_action('vol?' + Math.round(level) + '/' + Math.round(max));
     }
     getStatus(cb) {
-        server_action('status').then(cb);
+        server_action('status', null, 'json').then(cb);
     }
     getPosition(cb) {
         server_action('pos').then(function(res) {

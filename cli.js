@@ -5,21 +5,45 @@ const http = require('http'),
 
 var BASE = new URL('http://10.0.0.11:2224');
 
-function play(...urls) {
-    (urls.length == 1) ? playSingle(urls[0]) : playMultiple(urls);
+function play(urls, enqueue, uploadPrefix) {
+    (urls.length == 1 && !enqueue) ? playSingle(urls[0], uploadPrefix)
+                                   : playMultiple(urls, uploadPrefix);
 }
 
-function playSingle(url) {
-    post('/', {type: 'watch', url: toURI(url)});
+function playSingle(url, uploadFn) {
+    if (isFile(url))
+        uploadFile(url, true, uploadFn);
+    else
+        post('/', {type: 'watch', url: toURI(url)});
 }
 
-function playMultiple(urls) {
-    var tracks = urls.map((url, i) => ({id: i, uri: toURI(url)}));
-    post('/playlist', {tracks});
+async function playMultiple(urls, prefix="c") {
+    async function* intoTracks() {
+        for (let [i, url] of Object.entries(urls)) {
+            var id = `${prefix}${i}`;
+            if (isFile(url)) url = await uploadFile(url, false, id);
+            yield {id, kind: 2, uri: toURI(url)};
+        }
+    }
+    var tracks = await collect(intoTracks());
+    post('/playlist?enqueue', {tracks});
 }
 
-function playlist(filename) {
-    post('/playlist', {tracks: readTracks(filename)});
+function isFile(url) {
+    return url.match(/^[./]/) || fs.existsSync(url);
+}
+
+async function collect(g) {
+    var out = [];
+    for await (let e of g) out.push(e);
+    return out;
+}
+
+async function playlist(filename_or_plid) {
+    if (isYoutubePlaylist(filename_or_plid))
+        console.log((await playlistFromYoutube(filename_or_plid)).join(' '));
+    else
+        post('/playlist', {tracks: readTracks(filename_or_plid)});
 }
 
 function playlistPut(filename) {
@@ -28,9 +52,27 @@ function playlistPut(filename) {
     put(`/playlists/${id}`, content);
 }
 
-function upload(filename, thenPlay) {
+function isYoutubePlaylist(url) {
+    try {
+        const ytpl = require('ytpl');
+        return ytpl.validateURL(url);
+    }
+    catch { return false; }
+}
+
+async function playlistFromYoutube(plid) {
+    const ytpl = require('ytpl'),
+          pl = await ytpl('?list=' + plid);
+    for (let track of pl.items) {
+        console.log(`${track.id} | ${`[${track.author && track.author.name || '??'}] ${track.title}`
+                                     .padEnd(50)}    ${track.duration}`);
+    }
+    return pl.items.map(tr => tr.id);
+}
+
+function upload(filename, thenPlay, name) {
     if (filename.endsWith('.json')) playlistPut(filename);
-    else uploadFile(filename, thenPlay);
+    else uploadFile(filename, thenPlay, name);
 }
 
 function search(query) {
@@ -63,7 +105,7 @@ function waitToFinishPlaying() {
             try {
                 var st = JSON.parse(await get('/status', false)),
                     p = st.position,
-                    msg = `${st.playing ? '▶︎' : ' '} ${p && p.pos || '??'}/${p && p.duration || '??'}`;
+                    msg = `${st.playing ? '▶︎' : ' '} ${p && p.pos || '??'}/${p && p.duration || '??'}  ${st.track || ''}`;
                 
                 process.stderr.write(`\r${msg}       \r${msg}`, );
                 if (!p) reject()
@@ -132,10 +174,10 @@ function get(path, echo=true) {
     });
 }
 
-function uploadFile(filename, thenPlay) {   // via WebSocket
+function uploadFile(filename, thenPlay, name='c') {   // via WebSocket
     const WebSocket = require('ws');
 
-    var ws = new WebSocket(new URL(`cache/c`, BASE).href),
+    var ws = new WebSocket(new URL(`cache/${name}`, BASE).href),
         done = false;
     ws.once('open', () => {
         console.log('open', ws.url);
@@ -147,10 +189,14 @@ function uploadFile(filename, thenPlay) {   // via WebSocket
             }
         }, 500);
     });
-    ws.once('close', () => {
-        console.log('close');
-        if (done && thenPlay) play('file:///music/c');
+    var p = new Promise((resolve, reject) => {
+        ws.once('close', () => {
+            console.log('close', done);
+            if (done) resolve(`file:///music/${name}`);
+            else console.log('upload failed.');
+        });
     });
+    return thenPlay ? p.then(playSingle) : p;
 }
 
 
@@ -179,13 +225,19 @@ function toURI(url) {
     return encodeURI(url);
 }
 
+if (process.env.TUBE_SERVER) {
+    BASE = new URL(`http://${process.env.TUBE_SERVER}:2224`);
+}
+
 var opts = require('commander'), done;
 
 opts.option('-s,--server <url>', 'server url')
     .on('option:server', x => BASE = new URL(`http://${x}:2224`));
 
 opts.command('play <urls...>')
-    .action((urls) => { play(...urls); done = true; });
+    .option('-q,--enqueue', 'enqueue files to play at the end of the current playlist')
+    .option('-a,--as <prefix>', 'filename prefix for uploaded files')
+    .action((urls, o) => { play(urls, o.enqueue, o.as); done = true; });
 opts.command('playlist <filename>')
     .action((filename) => { playlist(filename); done = true; })
 opts.command('stop')
@@ -206,9 +258,10 @@ opts.command('pos [seek-to]')
     .action((seek) => { pos(seek); done = true; });
 opts.command('wait')
     .action(() => { waitToFinishPlaying(); done = true; });
-opts.command('upload -p <filename>')
+opts.command('upload -p -a <filename>')
     .option('-p,--play', 'start playing after upload')
-    .action((filename, o) => { upload(filename, o.play); done = true; });
+    .option('-a,--as <filename>', 'remote filename (default: c)')
+    .action((filename, o) => { upload(filename, o.play, o.as); done = true; });
 
 opts.command('fetch <url>')
     .action((url) => { fetch(url); done = true; });

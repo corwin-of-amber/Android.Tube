@@ -17,7 +17,7 @@ Vue.component('volume-control', {
     },
     methods: {
         wheel(ev) {
-            this.level += ev.deltaY;
+            this.level = Math.max(0, Math.min(this.max, this.level + ev.deltaY));
         }
     }
 });

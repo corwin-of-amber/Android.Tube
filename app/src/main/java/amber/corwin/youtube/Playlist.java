@@ -27,10 +27,14 @@ public class Playlist {
     List<Track> tracks;
     int nowPlaying;
 
-    public Playlist(Collection<Track> tracks) {
+    public Playlist() {
         this.tracks = new ArrayList<>();
-        this.tracks.addAll(tracks);
         nowPlaying = 0;
+    }
+
+    public Playlist(Collection<Track> tracks) {
+        this();
+        this.tracks.addAll(tracks);
     }
 
     public Track current() {
@@ -40,6 +44,15 @@ public class Playlist {
     public Track next() {
         if (nowPlaying < tracks.size() - 1) {
             nowPlaying++;
+            return current();
+        }
+        else
+            return null;
+    }
+
+    public Track prev() {
+        if (nowPlaying > 0) {
+            nowPlaying--;
             return current();
         }
         else

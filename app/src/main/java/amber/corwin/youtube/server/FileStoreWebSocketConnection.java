@@ -56,7 +56,7 @@ public class FileStoreWebSocketConnection extends WebSocketConnection {
     @Override
     protected void onMessage(NanoWSD.WebSocketFrame message) {
         byte[] buf = message.getBinaryPayload();
-        Log.d(TAG, "websocket msg (" + buf.length + ")");
+        //Log.d(TAG, "websocket msg (" + buf.length + ")");
         try {
             if (store != null)
                 store.write(buf);

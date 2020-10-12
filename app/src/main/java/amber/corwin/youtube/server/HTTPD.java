@@ -82,6 +82,10 @@ public class HTTPD extends NanoWSD {
             return pause();
         else if (path.equals("/resume"))
             return resume();
+        else if (path.equals("/next"))
+            return next();
+        else if (path.equals("/prev"))
+            return prev();
         else if (path.equals("/playlists"))
             return playlistsIndex();
         else if (path.startsWith("/playlists/"))
@@ -111,6 +115,9 @@ public class HTTPD extends NanoWSD {
     private Response pause() { context.player.pause(); return ok(); }
 
     private Response resume() { context.player.resume(); return ok(); }
+
+    private Response next() { return ok(context.player.playNext() ? "playing" : "finished"); }
+    private Response prev() { return ok(context.player.playPrev() ? "playing" : "no previous track"); }
 
     private Response vol(IHTTPSession session) {
         Method method = session.getMethod();
@@ -274,7 +281,7 @@ public class HTTPD extends NanoWSD {
         if (postData == null)
             return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","missing request body");
         else if (session.getUri().startsWith("/playlist"))
-            return playlist(postData);
+            return playlist(postData, "enqueue".equals(session.getQueryParameterString()));
         else
             return sendToJS(postData);
     }
@@ -313,8 +320,10 @@ public class HTTPD extends NanoWSD {
         }
     }
 
-    private Response ok() {
-        return newFixedLengthResponse(Response.Status.OK, "text/plain", "ok");
+    private Response ok() { return ok(""); }
+
+    private Response ok(String txt) {
+        return newFixedLengthResponse(Response.Status.OK, "text/plain", txt);
     }
 
     private Response error(String msg) {
@@ -378,10 +387,11 @@ public class HTTPD extends NanoWSD {
         }
     }
 
-    private Response playlist(String playlistData) {
+    private Response playlist(String playlistData, boolean enqueue) {
         try {
             Playlist playlist = Playlist.fromJSON(playlistData);
-            context.player.playFromList(playlist);
+            if (enqueue) context.player.enqueueTracks(playlist);
+            else context.player.playFromList(playlist);
             return ok();
         }
         catch (JSONException e) {

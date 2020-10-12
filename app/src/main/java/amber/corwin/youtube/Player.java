@@ -6,8 +6,10 @@ import android.media.MediaPlayer;
 import android.media.audiofx.Equalizer;
 import android.media.audiofx.LoudnessEnhancer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -109,8 +111,9 @@ public class Player {
         });
         player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
-            public boolean onError(MediaPlayer player, int i, int i1) {
-                playerError("Cannot play: " + title); return false;
+            public boolean onError(MediaPlayer player, int what, int extra) {
+                onVideoError(player, what, extra);
+                return true;
             }
         });
     }
@@ -176,15 +179,47 @@ public class Player {
         if (mediaPlayer != null) {
             if (track.gain != 0)
                 amplify(track.gain);
-            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mediaPlayer) {
-                    if (Player.this.mediaPlayer == mediaPlayer) {
-                        playNext();
-                    }
-                }
-            });
+            playNextWhenDone();
         }
+    }
+
+    int enqueueTrack(Playlist.Track track, boolean forPlay) {
+        int index = enqueueTrack(track);
+        if (forPlay && !isPlaying()) { playlist.nowPlaying = index;  playTrack(track); }
+        return index;
+    }
+
+    int enqueueTrack(Playlist.Track track) {
+        if (playlist == null) {
+            playlist = new Playlist();
+            if (nowPlayingUri != null) {
+                Playlist.Track cur = new Playlist.Track();
+                cur.uri = nowPlayingUri;
+                playlist.tracks.add(cur);
+            }
+        }
+        playlist.tracks.add(track);
+        if (isPlaying()) playNextWhenDone();
+        return playlist.tracks.size() - 1;
+    }
+
+    public void enqueueTracks(Playlist playlist) {
+        boolean first = true;
+        for (Playlist.Track track : playlist.tracks) {
+            enqueueTrack(track, first);
+            first = false;
+        }
+    }
+
+    private void playNextWhenDone() {
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mediaPlayer) {
+                if (Player.this.mediaPlayer == mediaPlayer) {
+                    playNext();
+                }
+            }
+        });
     }
 
     void clearTrack() {
@@ -203,12 +238,27 @@ public class Player {
         playTrack(playlist.current());
     }
 
-    void playNext() {
+    public boolean playNext() {
         if (this.playlist != null) {
             Playlist.Track track = playlist.next();
-            if (track != null)
+            if (track != null) {
                 playTrack(track);
+                return true;
+            }
         }
+        if (isPlaying()) pause();
+        return false;
+    }
+
+    public boolean playPrev() {
+        if (this.playlist != null) {
+            Playlist.Track track = playlist.prev();
+            if (track != null) {
+                playTrack(track);
+                return true;
+            }
+        }
+        return false;
     }
 
     public void pause() { if (isPlaying()) mediaPlayer.pause(); }
@@ -251,7 +301,10 @@ public class Player {
 
     public void setPosition(int seekTo) {
         Log.d(TAG, "seek to " + seekTo);
-        mediaPlayer.seekTo(seekTo);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            mediaPlayer.seekTo(seekTo, MediaPlayer.SEEK_CLOSEST);
+        else
+            mediaPlayer.seekTo(seekTo);
     }
 
     public Uri getCurrentUri() { return nowPlayingUri; }
