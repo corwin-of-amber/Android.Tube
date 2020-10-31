@@ -97,4 +97,36 @@ public class Playlist {
 
         return playlist;
     }
+
+    /**
+     * Create a message that can be sent to the JS side.
+     * @return {"type": "playlist", "data": {"id": ..., "tracks": [...]}}
+     * @throws JSONException (should never happen)
+     */
+    public String exportJSON() throws JSONException {
+        return exportJSON("play queue");
+    }
+
+    public String exportJSON(String id) throws JSONException {
+        JSONObject json = new JSONObject();
+        json.put("type", "playlist");
+        JSONObject data = new JSONObject();
+        data.put("id", id);
+        JSONArray jsonTracks = new JSONArray();
+        for (Track t : tracks) {
+            JSONObject jsonTrack = new JSONObject();
+            JSONObject jsonId = new JSONObject();
+            jsonId.put("videoId", t.id);
+            JSONObject jsonSnippet = new JSONObject();
+            jsonSnippet.put("title", t.uri);
+            jsonTrack.put("id", jsonId);
+            jsonTrack.put("uri", t.uri);
+            jsonTrack.put("snippet", jsonSnippet);
+            jsonTrack.put("_playlist", id);
+            jsonTracks.put(jsonTrack);
+        }
+        data.put("tracks", jsonTracks);
+        json.put("data", data);
+        return json.toString();
+    }
 }

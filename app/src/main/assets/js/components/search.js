@@ -37,11 +37,13 @@ Vue.component('video-snippet', {
     methods: {
         fetchDetails() {
             this.duration = undefined;
-            const self = this;
-            yapi.details(this.item.id.videoId).then(function(res) {
-                self.duration = res.duration;
-            })
-            .catch(function(e) { console.error(e); self.duration = -1; })
+            if (this.item.kind == 'youtube#searchResult') {
+                const self = this;
+                yapi.details(this.item.id.videoId).then(function(res) {
+                    self.duration = res.duration;
+                })
+                .catch(function(e) { console.error(e); self.duration = -1; })
+            }
         },
         timestamp(pt) {
             if (pt === -1) return "--:--";
@@ -87,7 +89,7 @@ Vue.component('search-ui', {
                 <input ref="query" v-model="searchQuery" @keydown.enter="blur()">
                 <search-button @click="selectAll"/>
             </div>
-            <div id="search-results">
+            <div id="search-results" class="list">
                 <template v-for="item in searchResults">
                     <video-snippet v-if="item.id.kind === 'youtube#video'"
                         :item="item" :active="item.id.videoId === active"
@@ -136,16 +138,18 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
-        data: {curPlaying: undefined, playlist: undefined, playlists: [], status: 'ready', uploading: undefined},
+        data: {curPlaying: undefined, playlist: undefined, playlists: [], status: 'ready', uploading: undefined,
+               show: {playlist: true, playlists: false}},
         template: `
             <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
                 <volume-control ref="volume"/>
-                <control-panel ref="controls" :playlist="playlist"/>
+                <control-panel ref="controls" :show="show"/>
                 <search-ui ref="search" @selected="watch" :active="curPlaying"/>
-                <playlist-ui v-if="playlist && playlist.show"
-                    ref="playlist" :playlist="playlist"
+                <playlist-ui v-if="playlist && show.playlist"
+                    ref="playlist" :playlist="playlist" :show="show"
                     @selected="watch" :active="curPlaying"/>
-                <playlist-ui-index :playlists="playlists"
+                <playlist-ui-index v-if="show.playlists"
+                    ref="playlists" :playlists="playlists"
                     @selected="loadPlaylist" :active="playlist && playlist.id"/>
                 <div v-if="uploading" class="upload-progress">{{uploading.filename}}
                     <span v-if="uploading.progress">{{(100 * uploading.progress.uploaded / uploading.progress.total).toFixed(1)}}%</span>
@@ -178,13 +182,20 @@ $(function() {
                     operation = playerCore.watchFromList(this.playlist.export(item));
                 }
                 else {
-                    operation = playerCore.watch(this.curPlaying);
+                    operation = playerCore.watch(item.uri || this.curPlaying);
                 }
                 operation
                     .catch(function() { self.status = 'error'; })
                     .then(function() { self.status = 'playing'; });
             },
 
+            openPlaylist(playlist) {
+                if (!playlist instanceof Playlist)
+                    playlist = Playlist.from(playlist);
+                this.playlist = playlist;
+                this.show.playlist = true;
+                this.playlist.store();
+            },
             loadPlaylist(entry, play) {
                 var self = this;
                 Playlist.loadFromServer(entry.id).then(function(playlist) {

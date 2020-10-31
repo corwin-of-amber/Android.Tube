@@ -67,6 +67,7 @@ public class MainActivity extends Activity {
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setAllowUniversalAccessFromFileURLs(true);
+        webSettings.setDomStorageEnabled(true);
 
         webView.addJavascriptInterface(new JsInterface(), "mainActivity");
 
@@ -110,7 +111,7 @@ public class MainActivity extends Activity {
         // CPU Wake lock  :/
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                TAG + " ::CPUWakeLock");
+                TAG + "::CPUWakeLock");
         wakeLock.acquire();
     }
 

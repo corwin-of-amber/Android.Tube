@@ -2,14 +2,14 @@
 
 
 Vue.component('playlist-ui', {
-    props: ['playlist', 'active'],
+    props: ['playlist', 'active', 'show'],
     data: function() { return { dragState: undefined }; },
     template: `
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
                 @drop="drop" :class="{['drag-'+dragState]: !!dragState}">
-        <playlist-toolbox/>
+        <playlist-toolbox :show="show"/>
         <playlist-caption v-model="playlist.name"/>
-        <div class="playlist-body">
+        <div class="list playlist-body">
             <div class="playlist-item" v-for="track in playlist.tracks">
                 <div class="gutter"/>
                 <video-snippet
@@ -99,11 +99,17 @@ Vue.component('playlist-caption', {
 });
 
 Vue.component('playlist-toolbox', {
+    props: ['show'],
     template: `
         <div class='toolbox'>
-            <button name='list'>@</button>
+            <button name='index' @click="toggleIndex">@</button>
         </div>
-    `
+    `,
+    methods: {
+        toggleIndex() {
+            this.show.playlists = !this.show.playlists;
+        }
+    }
 });
 
 Vue.component('playlist-ui-index', {
@@ -112,7 +118,7 @@ Vue.component('playlist-ui-index', {
     template: `
     <div class="playlist-ui-index">
         <h1>Playlists</h1>
-        <ul>
+        <ul class="list">
             <li class="playlist-entry" :class="{active: entry.id == active}"
                     v-for="entry in playlists"
                     @click="$emit('selected', entry)">
@@ -209,9 +215,11 @@ class Playlist {
             nowPlaying = this.indexOf(nowPlaying);
 
         const mkTrack = function(track) {
+            var kind = (track.kind == 'youtube#searchResult') ?
+                        Playlist.KIND.YOUTUBE : Playlist.KIND.DIRECT;
             return {
-                id: track.id.videoId, kind: Playlist.KIND.YOUTUBE,
-                uri: track.id.videoId
+                id: track.id.videoId, kind: kind,
+                uri: track.uri || track.id.videoId
             };
         };
 
@@ -225,5 +233,5 @@ class Playlist {
 }
 
 
-Playlist.KIND = {YOUTUBE: 2};
+Playlist.KIND = {DIRECT: 1, YOUTUBE: 2};
 Playlist.DEFAULT_STORAGE_KEY = 'tube.playlist';

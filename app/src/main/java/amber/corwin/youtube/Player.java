@@ -17,6 +17,8 @@ import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import org.json.JSONException;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -314,6 +316,16 @@ public class Player {
     }
 
     public Error getLastError() { return error; }
+
+    public String exportPlaylist() {
+        if (playlist != null) {
+            try {
+                return playlist.exportJSON();
+            }
+            catch (JSONException e) { return null; }
+        }
+        else return null;
+    }
 
     public void amplify(int millibels) {
         if (mediaPlayer != null) {

@@ -392,6 +392,16 @@ public class HTTPD extends NanoWSD {
             Playlist playlist = Playlist.fromJSON(playlistData);
             if (enqueue) context.player.enqueueTracks(playlist);
             else context.player.playFromList(playlist);
+            // send to UI
+            final String uiMsg = context.player.exportPlaylist();
+            if (uiMsg != null)
+                context.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        context.jsCall(uiMsg);
+                    }
+                });
+
             return ok();
         }
         catch (JSONException e) {

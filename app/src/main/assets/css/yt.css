@@ -38,6 +38,10 @@ body {
     flex: 1 1 1%;
 }
 
+#ui-container > div:last-of-type > .list {
+    padding-right: 20px;
+}
+
 div.search-ui, div.playlist-ui, div.playlist-ui-index {
     padding: 9px;
     height: 100%;

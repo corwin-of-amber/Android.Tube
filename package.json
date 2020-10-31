@@ -19,7 +19,7 @@
         "lodash": "^4.17.19",
         "vue": "^2.6.11",
         "ws": "^7.3.0",
-        "ytdl-core": "^2.1.7",
+        "ytdl-core": "^4.0.0",
         "ytpl": "^0.1.22"
     },
     "devDependencies": {

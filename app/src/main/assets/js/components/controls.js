@@ -71,26 +71,26 @@ Vue.component('play-pause-button', {
 
 
 Vue.component('playlist-button', {
-    props: ['playlist'],
+    props: ['show'],
     template: `
         <button name="show-playlist" @click="toggle"
-            :class="{on: playlist && playlist.show}">[playlist]</button>
+            :class="{on: show.playlist}">[playlist]</button>
     `,
     methods: {
         toggle() {
-            this.$set(this.playlist, 'show', !this.playlist.show);
+            this.show.playlist = !this.show.playlist;
         }
     }
 });
 
 
 Vue.component('control-panel', {
-    props: ['playlist'],
+    props: ['show'],
     data: function() { return {expand: false, status: {}, monitorInterval: 500}; },
     template: `
         <div class="control-panel" :class="{expand}">
             <div class="controls">
-                <playlist-button ref="playlist" :playlist="playlist"/>
+                <playlist-button ref="playlist" :show="show"/>
                 <play-pause-button ref="playPause"/>
                 <position-bar ref="position"/>
             </div>
@@ -127,6 +127,11 @@ class AndroidAppPlayerControls {
     getVolume() { /* todo */ }
     setVolume(level, max) {
         mainActivity.setVolume(level, max);
+    }
+    getStatus(cb) {
+        this.getPosition(function(pos) {
+            cb({position: pos, playing: !!pos.duration /** @todo */});
+        });
     }
     getPosition(cb) {
         cb({pos: mainActivity.getPosition(),

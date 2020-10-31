@@ -1,10 +1,9 @@
 'use strict';
 
 
-var DEFAULT_MEDIA_TYPE = 'audio/';
-/*    (typeof mainActivity !== 'undefined' || typeof server_action !== 'undefined')
-        ? 'video/' : 'audio/';*/
-var PREFERRED_FORMATS = [
+var DEFAULT_MEDIA_TYPE = '';  //  can be 'audio/' or 'video/'
+var PREFERRED_FORMATS = [     //  most preferred first
+    /^audio[/]mp4; codecs="mp4a.*"/,
     /^audio[/]webm; codecs="opus"/
 ];
 
@@ -20,6 +19,13 @@ if (![].find) {
     Array.prototype.find = function(p) {
         for (var i = 0; i < this.length; i++)
             if (p(this[i])) return this[i];
+    }
+}
+if (![].includes) {
+    Array.prototype.includes = function(el) {
+        for (var i = 0; i < this.length; i++)
+            if (this[i] === el) return true;
+        return false;
     }
 }
 if (!Object.assign) {
@@ -77,7 +83,8 @@ class YtdlPlayerCore {
                 if (ftype && ftype.startsWith(type)) {
                     var r = PREFERRED_FORMATS.findIndex(
                                 function(re) { return re.exec(ftype); });
-                    if (!webm || r > rank) {
+                    if (r < 0) r = Infinity;
+                    if (!webm || r < rank) {
                         webm = format;
                         rank = r;
                     }
@@ -86,6 +93,7 @@ class YtdlPlayerCore {
 
             if (!webm) throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
 
+            console.log(`selected format: ${webm.mimeType}`);
             return webm;
         })
         .catch(function(err) {
@@ -134,7 +142,6 @@ else {
 
 
 function playInPage(track, mediaUrl, mediaType) {
-    console.log(mediaType);
     var a = $('<audio>').attr('controls', true);
     a.data('track', track);
     a.append($('<source>').attr('src', mediaUrl));
@@ -144,9 +151,10 @@ function playInPage(track, mediaUrl, mediaType) {
 
 function action(cmd) {
     switch (cmd.type) {
-    case 'watch':    return playerCore.watch(cmd.url); break;
-    case 'search':   return app.search(cmd.text); break;
-    case 'details':  return yapi.details(cmd.videoId); break;
+    case 'watch':    return playerCore.watch(cmd.url);
+    case 'search':   return app.search(cmd.text);
+    case 'details':  return yapi.details(cmd.videoId);
+    case 'playlist': app.openPlaylist(cmd.data); return Promise.resolve();
     case 'request':
         var id = cmd.id;
         action(cmd.inner).then(function(res) {
@@ -166,4 +174,3 @@ window.onmessage = function(msg) {
     if (typeof msg.data === 'string')
         action(JSON.parse(msg.data));
 };
-/*watch('https://www.youtube.com/watch?v=mBnkvdM56XQ');*/
