@@ -2,6 +2,9 @@ package amber.corwin.youtube;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -17,10 +20,15 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.TreeMap;
@@ -45,6 +53,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        unpack();
 
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 
@@ -146,6 +156,24 @@ public class MainActivity extends Activity {
             Log.e(TAG, "error reading from stream", e);
             return "";
         }
+    }
+
+    void unpack() {
+        try {
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            Writer w = new FileWriter(new File(assetsStorageDir(), "timestamp"));
+            w.write("" + packageInfo.lastUpdateTime / 1000);
+            w.close();
+        }
+        catch (PackageManager.NameNotFoundException | IOException e) { Log.e(TAG, "unpack", e); }
+    }
+
+    private File assetsStorageDir() {
+        File d = new File(getDir("data", Context.MODE_PRIVATE), "webview");
+        if (!d.isDirectory() && !d.mkdirs()) {
+            Log.w(TAG, "'" + d.getPath() + "': failed to create directory");
+        }
+        return d;
     }
 
     // ---------------
