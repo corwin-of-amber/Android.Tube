@@ -37,7 +37,10 @@ Vue.component('video-snippet', {
     methods: {
         fetchDetails() {
             this.duration = undefined;
-            if (this.item.kind == 'youtube#searchResult') {
+            if (this.item.contentDetails) {
+                this.duration = this.item.contentDetails.duration;
+            }
+            else if (this.item.kind == 'youtube#searchResult') {
                 const self = this;
                 yapi.details(this.item.id.videoId).then(function(res) {
                     self.duration = res.duration;
@@ -91,8 +94,8 @@ Vue.component('search-ui', {
             </div>
             <div id="search-results" class="list">
                 <template v-for="item in searchResults">
-                    <video-snippet v-if="item.id.kind === 'youtube#video'"
-                        :item="item" :active="item.id.videoId === active"
+                    <video-snippet v-if="itemKind(item) === 'youtube#video'"
+                        :item="item" :active="itemId(item) === active"
                         @click="$emit('selected', item)"
                         @swipe="$emit('swipe', item)"/>
                 </template>
@@ -116,6 +119,12 @@ Vue.component('search-ui', {
                 self.searchResults = res.items;
                 return res;
             });
+        },
+        itemId(item) {
+            return typeof item.id === 'string' ? item.id : item.id.videoId;
+        },
+        itemKind(item) {
+            return typeof item.id === 'string' ? item.kind : item.id.kind;
         },
         blur() {
             $(this.$el).find('input').blur();
@@ -177,7 +186,7 @@ $(function() {
             watch(item) {
                 var self = this, operation;
                 this.status = 'pending';
-                this.curPlaying = item.id.videoId;
+                this.curPlaying = this.$refs.search.itemId(item);
                 if (this.playlist && this.playlist.id && item._playlist === this.playlist.id && playerCore.watchFromList) {
                     operation = playerCore.watchFromList(this.playlist.export(item));
                 }

@@ -24,11 +24,21 @@ class YouTubeSearch {
     }
 
     search(query) {
-        return this.yapi('search', {maxResults: 50, part: 'snippet', q: query});
+        var id = this.asVideoId(query);
+        return id ? this.yapi('videos', {id, part: 'snippet,contentDetails'})
+                  : this.yapi('search', {maxResults: 50, part: 'snippet', q: query});
     }
 
     page(pageToken) {
         return this.yapi('search', {maxResults: 50, part: 'snippet', pageToken: pageToken});
+    }
+
+    asVideoId(query) {
+        if (query.match(/^[#=]/)) return query.slice(1);
+        else {
+            try { return ytdl.getURLVideoID(query); }
+            catch { return undefined; }
+        }
     }
 
     _details(videoId) {
