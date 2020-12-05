@@ -66,10 +66,7 @@ Vue.component('playlist-ui', {
             }
         },
 
-        /** @oops this is copied from search.js */
-        itemId(item) {
-            return typeof item.id === 'string' ? item.id : item.id.videoId;
-        },
+        itemId(item) { return YoutubeItem.id(item); },
 
         store() { Playlist.store(this.playlist) }
     }
@@ -238,11 +235,12 @@ class Playlist {
             nowPlaying = this.indexOf(nowPlaying);
 
         const mkTrack = function(track) {
-            var kind = (track.kind == 'youtube#searchResult') ?
+            var id = YoutubeItem.id(track),
+                kind = /^youtube#/.exec(YoutubeItem.kind(track)) ?
                         Playlist.KIND.YOUTUBE : Playlist.KIND.DIRECT;
             return {
-                id: track.id.videoId, kind: kind,
-                uri: track.uri || track.id.videoId
+                id: id, kind: kind,
+                uri: track.uri || id
             };
         };
 

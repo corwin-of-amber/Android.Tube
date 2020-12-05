@@ -19,6 +19,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONException;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -53,6 +55,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        WebView.setWebContentsDebuggingEnabled(true);
 
         unpack();
 
@@ -95,7 +99,8 @@ public class MainActivity extends Activity {
                 String scheme = req.getUrl().getScheme();
                 String path = req.getUrl().getPath();
                 if (scheme != null && scheme.equals("file") && path != null) {
-                    return new WebResourceResponse("text/javascript", "UTF-8",
+                    String mimeType = path.endsWith(".css") ? "text/css" : "text/javascript";
+                    return new WebResourceResponse(mimeType, "UTF-8",
                             openAsset(path));
                 } else {
                     return super.shouldInterceptRequest(view, req);
@@ -199,6 +204,11 @@ public class MainActivity extends Activity {
             }
             else
                 player.playMedia(Uri.parse(mediaUrl), Uri.parse(watchUrl));   // initiated by JS
+        }
+        @JavascriptInterface
+        public void playFromList(String playlistJson) throws JSONException {
+            Playlist playlist = Playlist.fromJSON(playlistJson);
+            player.playFromList(playlist);
         }
         @JavascriptInterface
         public void setVolume(int level, int max) {

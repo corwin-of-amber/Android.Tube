@@ -43,6 +43,10 @@ if (!Object.values) {
 
 
 class YtdlPlayerCore {
+    constructor(preferredFormats) {
+        this.preferredFormats = (preferredFormats || PREFERRED_FORMATS);
+    }
+
     watch(urlOrId) {
         var self = this;
         return this.getWatchUrl(urlOrId).then(
@@ -50,9 +54,18 @@ class YtdlPlayerCore {
             .catch(function(err) { console.error(err); });
     }
 
-    getWatchUrl(urlOrId) {
+    watchFromList(playlistData) {
+        if (typeof mainActivity === 'undefined')
+            return this.watch(playlistData.tracks[playlistData.nowPlaying || 0].uri); // sorry
+        else {
+            mainActivity.playFromList(JSON.stringify(playlistData));
+            return Promise.resolve();
+        }
+    }
+
+    getWatchUrl(urlOrId, type, preferredFormats) {
         if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId))
-            return this.getStream(urlOrId);
+            return this.getStream(urlOrId, type, preferredFormats);
         else return Promise.resolve({url: urlOrId, type: 'unknown'});
     }
 
@@ -63,9 +76,10 @@ class YtdlPlayerCore {
             mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
     }
 
-    getStream(youtubeUrl, type) {
+    getStream(youtubeUrl, type, preferredFormats) {
         var self = this;
         type = type || DEFAULT_MEDIA_TYPE;
+        preferredFormats = preferredFormats || this.preferredFormats;
         return ytdl.getInfo(youtubeUrl).then(function (info) {
             if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
     
@@ -81,7 +95,7 @@ class YtdlPlayerCore {
                     continue;
                 }
                 if (ftype && ftype.startsWith(type)) {
-                    var r = PREFERRED_FORMATS.findIndex(
+                    var r = preferredFormats.findIndex(
                                 function(re) { return re.exec(ftype); });
                     if (r < 0) r = Infinity;
                     if (!webm || r < rank) {
@@ -115,7 +129,7 @@ class YtdlPlayerCore {
 
     getStreamFromMPD(url) {
         return $.ajax(url).then(function (mpd) {
-            var xml = $(mpd),
+            var xml = $.parseXML(mpd),
                 m = xml.find('AdaptationSet[mimeType="audio/webm"] BaseURL');
             if (m.length == 0) m = xml.find('BaseURL');
             if (m.length == 0)
@@ -128,16 +142,32 @@ class YtdlPlayerCore {
     playlists() { return Promise.resolve([]);  /** @todo */ }
 }
 
+class YoutubeItem {
+    static id(item) {
+        var id = item.id || item.snippet && item.snippet.resourceId;
+        return id.videoId || id;
+    }
+    static kind(item) {
+        var id = item.id || item.snippet && item.snippet.resourceId;
+        return item.kind || (id && id.kind)  /** makes you wish you had `?.` */
+    }
+}
+
+
 var playerCore, yapi;
 
-if (typeof ClientPlayerCore !== 'undefined'     /* In client browser */
-     && !(location.search && location.search.length)) {
-    playerCore = new ClientPlayerCore();
-    yapi = new ClientYouTubeSearch();
-}
-else {
+if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
     playerCore = new YtdlPlayerCore();
     yapi = new YouTubeSearch();
+}
+else if (typeof nw !== 'undefined' &&        /* In NWjs standalone app */
+        !(location.search && location.search.length)) {
+    playerCore = new YtdlPlayerCore([/^audio[/]webm; codecs="opus"/]);
+    yapi = new YouTubeSearch();
+}
+else {                                           /* In client browser */
+    playerCore = new ClientPlayerCore();
+    yapi = new ClientYouTubeSearch();
 }
 
 

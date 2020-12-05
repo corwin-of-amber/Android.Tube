@@ -120,12 +120,8 @@ Vue.component('search-ui', {
                 return res;
             });
         },
-        itemId(item) {
-            return typeof item.id === 'string' ? item.id : item.id.videoId;
-        },
-        itemKind(item) {
-            return typeof item.id === 'string' ? item.kind : item.id.kind;
-        },
+        itemId(item) { return YoutubeItem.id(item); },
+        itemKind(item) { return YoutubeItem.kind(item); },
         blur() {
             $(this.$el).find('input').trigger('blur');
         },
@@ -186,7 +182,7 @@ $(function() {
             watch(item) {
                 var self = this, operation;
                 this.status = 'pending';
-                this.curPlaying = this.$refs.search.itemId(item);
+                this.curPlaying = YoutubeItem.id(item);
                 if (this.playlist && this.playlist.id && item._playlist === this.playlist.id && playerCore.watchFromList) {
                     operation = playerCore.watchFromList(this.playlist.export(item));
                 }

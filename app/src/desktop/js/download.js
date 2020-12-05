@@ -40,8 +40,9 @@ class AudioDownload {
     }
 
     static async fromTrack(item, metadata = {}) {
-        return new AudioDownload(await playerCore.getWatchUrl(item.id),
-                                 item, metadata);
+        return new AudioDownload(
+            await playerCore.getWatchUrl(item.id, '', AudioDownload.PREFERRED_FORMATS),
+            item, metadata);
     }
 
     static async do(items, metadata = {}) {
@@ -83,9 +84,11 @@ class AudioDownload {
 
     _metadataFlags(metadata) {
         const mdflag = '-metadata';
-        return [].concat(...[...Object.entries(metadata)]
-                             .map(([k,v]) => [mdflag, `${k}=${v}`]));
+        return [].concat(...Object.entries(metadata)
+                            .map(([k,v]) => [mdflag, `${k}=${v}`]));
     }
 
     static TEMPDIR = '/tmp/Android.Tube';
+
+    static PREFERRED_FORMATS = PREFERRED_FORMATS;
 }
