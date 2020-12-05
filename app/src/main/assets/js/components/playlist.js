@@ -13,7 +13,7 @@ Vue.component('playlist-ui', {
             <div class="playlist-item" v-for="track in playlist.tracks">
                 <div class="gutter"/>
                 <video-snippet
-                    :item="track" :active="track.id.videoId === active"
+                    :item="track" :active="itemId(track) === active"
                     @click="$emit('selected', track)"/>
             </div>
         </div>
@@ -64,6 +64,11 @@ Vue.component('playlist-ui', {
                     }
                 }
             }
+        },
+
+        /** @oops this is copied from search.js */
+        itemId(item) {
+            return typeof item.id === 'string' ? item.id : item.id.videoId;
         },
 
         store() { Playlist.store(this.playlist) }
@@ -135,6 +140,7 @@ class Playlist {
     constructor(name, tracks) {
         this.name = name;
         this.tracks = tracks || [];
+        this.id = Playlist.mkShortId();
     }
 
     add(item) {
@@ -205,6 +211,23 @@ class Playlist {
         return blob.text().then(function(text) {
             return Playlist.from(text);
         });
+    }
+
+    /**
+     * Imports a youtube#playlistItemListResponse into this playlist
+     * @param {items} object either a response from a playlistItems query
+     *   to the Youtube API, or the `items` member of such.
+     */
+    importYoutube(items) {
+        if (items.items) items = items.items;
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            this.add({
+                id: item.snippet.resourceId.videoId,
+                snippet: item.snippet
+            });
+        }
+        return this;
     }
 
     /**

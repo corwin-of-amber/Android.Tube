@@ -55,14 +55,14 @@ function playlistPut(filename) {
 function isYoutubePlaylist(url) {
     try {
         const ytpl = require('ytpl');
-        return ytpl.validateURL(url);
+        return ytpl.validateID(url);
     }
     catch { return false; }
 }
 
 async function playlistFromYoutube(plid) {
     const ytpl = require('ytpl'),
-          pl = await ytpl('?list=' + plid);
+          pl = await ytpl(plid);
     for (let track of pl.items) {
         console.log(`${track.id} | ${`[${track.author && track.author.name || '??'}] ${track.title}`
                                      .padEnd(50)}    ${track.duration}`);

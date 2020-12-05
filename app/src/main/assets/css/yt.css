@@ -295,3 +295,10 @@ button[name="play-pause"] {
     left: 5px;
     background: #fffffff8;
 }
+
+div#video-area {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    opacity: 0.5;  /* this is better when playing audio, probably need to reset if video is actually shown... */
+}

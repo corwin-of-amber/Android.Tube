@@ -47,14 +47,24 @@ class ClientPlayerCore {
         var status = await server_action(playlist, '/playlist');
         if (status !== 'ok') throw new Error(status);
     }
-    async upload(file, progress) {
+    enqueue(tracks) {
+        if (!Array.isArray(tracks)) tracks = [tracks];
+        return server_action({tracks}, '/playlist?enqueue');
+    }
+    async upload(file, progress, name = 'c') {
         console.log(`%cupload %c${file.name} [${file.type}]`, "color: #f99", "color: #f33");
         var host = SERVER.length ? new URL(SERVER).host : undefined,
-            w = new WebSocketConnection('cache/a', host);
+            w = new WebSocketConnection(`cache/${name}`, host);
         if (progress) w.uploadProgress = progress;
         await w.upload(file);
         console.log('%cupload finished.', "color: #f99"); 
-        playerCore.watch('file:///music/a');
+        return {id: name, kind: 2, uri: `file:///music/${name}`};
+    }
+    async uploadAndPlay(file, progress, name = 'c') {
+        this.watch((await this.upload(file, progress, name)).uri);
+    }
+    async uploadAndEnqueue(file, progress, name = 'c') {
+        this.enqueue(await this.upload(file, progress, name));
     }
     playlists() {
         return server_action('playlists', null, 'json');

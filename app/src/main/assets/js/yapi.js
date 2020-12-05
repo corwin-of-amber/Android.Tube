@@ -33,6 +33,27 @@ class YouTubeSearch {
         return this.yapi('search', {maxResults: 50, part: 'snippet', pageToken: pageToken});
     }
 
+    playlistItems(playlistId) {
+        var self = this,
+            props = {playlistId: playlistId, maxResults: 50, part: 'snippet'};
+        return this.yapi('playlistItems', props)
+            .then(function(results) {
+                return new YoutubePagedResults(
+                    results,
+                    function(props) { return self.yapi('playlistItems', props)},
+                    props);
+                });
+    }
+
+    playlistItemsAll(playlistId) {
+        return this.playlistItems(playlistId).then(function(paged) {
+            return paged.all().then(function(results) {
+                return [].concat.apply([],
+                    results.map(function(r) { return r.items; }));
+            });
+        });
+    }
+
     asVideoId(query) {
         if (query.match(/^[#=]/)) return query.slice(1);
         else {
@@ -47,6 +68,35 @@ class YouTubeSearch {
                 var item = res.items[0];
                 return item ? res.items[0].contentDetails : Promise.reject(`not found: '${videoId}'`);
             });
+    }
+}
+
+
+class YoutubePagedResults {
+    constructor(current, cont, props) {
+        this.current = current;
+        this.cont = cont;
+        this.props = props || {};
+    }
+
+    next() {
+        if (this.current.nextPageToken) {
+            var self = this,
+                props = Object.assign({pageToken: this.current.nextPageToken}, this.props);
+            return this.cont(props).then(function(result) {
+                return new YoutubePagedResults(result, self.cont, self.props);
+            });
+        }
+    }
+
+    all() {
+        var acc = [this.current], next = this.next();
+        if (next)
+            return next.then(function(more) {
+                return more.all().then(function(rest) { return acc.concat(rest); });
+            });
+        else
+            return Promise.resolve(acc);
     }
 }
 

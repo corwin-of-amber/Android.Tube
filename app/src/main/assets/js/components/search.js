@@ -41,7 +41,7 @@ Vue.component('video-snippet', {
                 this.duration = this.item.contentDetails.duration;
             }
             else if (this.item.kind == 'youtube#searchResult') {
-                const self = this;
+                var self = this;
                 yapi.details(this.item.id.videoId).then(function(res) {
                     self.duration = res.duration;
                 })
@@ -114,7 +114,7 @@ Vue.component('search-ui', {
             if (this._lastSearch === query) return this._lastResult; // perf
             else this._lastSearch = query;
 
-            const self = this;
+            var self = this;
             return this._lastResult = yapi.search(query).then(function(res) {
                 self.searchResults = res.items;
                 return res;
@@ -127,7 +127,7 @@ Vue.component('search-ui', {
             return typeof item.id === 'string' ? item.kind : item.id.kind;
         },
         blur() {
-            $(this.$el).find('input').blur();
+            $(this.$el).find('input').trigger('blur');
         },
         selectAll() {
             this.$refs.query.select();
@@ -214,7 +214,14 @@ $(function() {
                 });
             },
 
-            upload(file) {
+            importPlaylist(youtubePlaylistId) {
+                var self = this;
+                yapi.playlistItemsAll(youtubePlaylistId).then(function(items) {
+                    self.playlist = new Playlist('Imported').importYoutube(items);
+                });
+            },
+
+            upload(file, name) {
                 var self = this;
                 if (file.type == 'application/json') {
                     Playlist.upload(file).then(function(playlist) {
@@ -224,19 +231,36 @@ $(function() {
                 else if (file.type.match(/^(audio|video)[/]/) ||
                          file.name.match(/[.](mkv)$/)) {
                     this.uploading = {filename: file.name, progress: undefined};
-                    playerCore.upload(file, function(p) { 
+                    return playerCore.upload(file, function(p) { 
                         self.uploading.progress = p; 
-                    })
-                    .then(function() { self.uploading = undefined; });
+                    }, name)
+                    .finally(function() { self.uploading = undefined; });
                 }
                 else console.warn("unrecognized file type: " + file.type);
+            },
+
+            uploadMultiple(files) {
+                var conts = [], _this = this;
+                for (var i = 0; i < files.length; i++) {
+                    conts.push((function(f, id) {
+                        return function() {
+                            return _this.upload(f, id).then(function(track) {
+                                console.log('enqueue', track);
+                                playerCore.enqueue(track);
+                            });
+                        }
+                    })(files[i], 'c'+i));
+                }
+                conts.reduce(function(p, cont) {
+                    return p.then(cont);
+                }, Promise.resolve());
             },
 
             dragOver(ev) { ev.preventDefault(); },
             drop(ev) {
                 ev.preventDefault();
                 if (ev.dataTransfer.files.length > 0)
-                    this.upload(ev.dataTransfer.files[0])
+                    this.uploadMultiple(ev.dataTransfer.files)
                 else if (this.$refs.playlist)
                     this.$refs.playlist.dropAway(ev);
             }
