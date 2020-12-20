@@ -149,7 +149,7 @@ class YoutubeItem {
     }
     static kind(item) {
         var id = item.id || item.snippet && item.snippet.resourceId;
-        return item.kind || (id && id.kind)  /** makes you wish you had `?.` */
+        return (id && id.kind) || item.kind  /** makes you wish you had `?.` */
     }
 }
 

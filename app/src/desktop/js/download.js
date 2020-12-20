@@ -14,9 +14,11 @@ class AudioDownload {
     }
 
     async do() {
+        var outfile = this._filename(), id = this._id();
+        console.log(`[download] ${id} ${outfile}`);
         var tmpfile = this._mktemp(`${this._id()}.dl.tmp`);
         await this._fetch(tmpfile);
-        var outfile = this._mktemp(this._filename());
+        outfile = this._mktemp(outfile);
         this.fixContainer(tmpfile, outfile, this.metadata).then(() => {
             try { fs.unlinkSync(tmpfile); } catch (e) { console.warn(e); }
         });
@@ -41,7 +43,7 @@ class AudioDownload {
 
     static async fromTrack(item, metadata = {}) {
         return new AudioDownload(
-            await playerCore.getWatchUrl(item.id, '', AudioDownload.PREFERRED_FORMATS),
+            await playerCore.getWatchUrl(YoutubeItem.id(item), '', AudioDownload.PREFERRED_FORMATS),
             item, metadata);
     }
 
@@ -60,16 +62,7 @@ class AudioDownload {
     }
 
     _id() {
-        var id, t;
-        if (this.info) {
-            if (id = this.info.id) ;
-            else if (this.info.snippet) {
-                if ((t = this.info.snippet.resourceId) &&
-                    (id = t.videoId)) ;
-                else /** @todo */ ;
-            }
-        }
-        return id || '@todo';
+        return YoutubeItem.id(this.info); 
     }
 
     _filename() {
