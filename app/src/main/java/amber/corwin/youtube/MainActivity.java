@@ -232,6 +232,10 @@ public class MainActivity extends Activity {
             PlaybackPosition pos = player.getPosition();
             return (pos == null) ? 0 : pos.duration;
         }
+        @JavascriptInterface
+        public void setPosition(int seekTo) {
+            player.setPosition(seekTo);
+        }
     }
 
     public void jsCall(String json) {

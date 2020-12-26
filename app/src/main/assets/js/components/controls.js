@@ -137,6 +137,9 @@ class AndroidAppPlayerControls {
         cb({pos: mainActivity.getPosition(),
             duration: mainActivity.getDuration()});
     }
+    seek(pos) {
+        mainActivity.setPosition(pos);
+    }
     resume() { mainActivity.resume(); return true; }
     pause() { mainActivity.pause(); return true; }
 }

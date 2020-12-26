@@ -151,6 +151,9 @@ class YoutubeItem {
         var id = item.id || item.snippet && item.snippet.resourceId;
         return (id && id.kind) || item.kind  /** makes you wish you had `?.` */
     }
+    static url(item) {
+        return `https://youtube.com/watch?v=${YoutubeItem.id(item)}`;
+    }
 }
 
 

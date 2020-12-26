@@ -58,7 +58,7 @@ class YouTubeSearch {
         if (query.match(/^[#=]/)) return query.slice(1);
         else {
             try { return ytdl.getURLVideoID(query); }
-            catch { return undefined; }
+            catch (e) { return undefined; }
         }
     }
 

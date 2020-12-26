@@ -29,7 +29,7 @@ Vue.component('video-snippet', {
     },
     template: `
         <p class="video-snippet" :class="{active: active}" @click="$emit('click')"
-                draggable="true" @dragstart="dragStart">
+                draggable="true" @dragstart="dragStart" @contextmenu.prevent="menu">
             <span class="title" v-html="item.snippet.title"/>
             <span class="duration" v-if="duration">{{timestamp(duration)}}</span>
         </p>
@@ -75,6 +75,20 @@ Vue.component('video-snippet', {
                     console.log('swipe', this.item);
                     this.$emit('swipe', this.item);
                 }
+            }
+        },
+        menu(ev) {
+            if (this.$root.$refs.menu)
+                this.$root.$refs.menu.open(ev, this);
+        },
+        action(action) {
+            function copy(v) {
+                console.log(v); navigator.clipboard.writeText(v);
+            }
+            switch (action.type) {
+            case 'copy-id': copy(YoutubeItem.id(this.item)); break;
+            case 'copy-url': copy(YoutubeItem.url(this.item)); break;
+            case 'set-global': window.sel = this.item; break;
             }
         }
     }
@@ -159,6 +173,7 @@ $(function() {
                 <div v-if="uploading" class="upload-progress">{{uploading.filename}}
                     <span v-if="uploading.progress">{{(100 * uploading.progress.uploaded / uploading.progress.total).toFixed(1)}}%</span>
                 </div>
+                <app-context-menu v-if="hasContextMenu" ref="menu" @action="menuAction"/>
             </div>
         `,
         mounted() {
@@ -174,6 +189,9 @@ $(function() {
             this.$refs.controls.$watch('status', function(status) {
                 if (status.track) self.curPlaying = status.track;
             });
+        },
+        computed: {
+            hasContextMenu() { return typeof AppContextMenu != 'undefined'; }
         },
         methods: {
             search(query) {
@@ -195,7 +213,7 @@ $(function() {
             },
 
             openPlaylist(playlist) {
-                if (!playlist instanceof Playlist)
+                if (!(playlist instanceof Playlist))
                     playlist = Playlist.from(playlist);
                 this.playlist = playlist;
                 this.show.playlist = true;
@@ -259,8 +277,29 @@ $(function() {
                     this.uploadMultiple(ev.dataTransfer.files)
                 else if (this.$refs.playlist)
                     this.$refs.playlist.dropAway(ev);
-            }
-        }
+            },
+
+            connect() {
+                this.client = new ClientPlayerCore();
+            },
+
+            menuAction(action) {
+                if (action.for) action.for.action(action);
+                switch (action.type) {
+                case 'connect':
+                    this.connect();
+                    break;
+                case 'play-remote':
+                    if (!this.client) this.connect();
+                    var item = action.for.item;
+                    if (item) {
+                        this.client.watch(item.uri || YoutubeItem.id(item));
+                    }
+                    break;
+                }
+            },
+        },
+        components: typeof AppContextMenu == 'undefined' ? {} : {AppContextMenu}
     });
 });
 
