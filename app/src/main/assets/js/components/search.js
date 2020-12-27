@@ -304,8 +304,10 @@ $(function() {
 });
 
 // Prevents window from moving on touch on newer browsers.
+var SCROLLABLE_ELEMS = '.search-ui, .playlist-ui, .playlist-ui-index';
+
 window.addEventListener('touchmove', function (event) {
-    if ($(event.target).closest('.search-ui').length === 0 &&
+    if ($(event.target).closest(SCROLLABLE_ELEMS).length === 0 &&
         event.target.className !== 'volume-control')
         event.preventDefault();
     event.stopPropagation();
