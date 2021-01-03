@@ -49,11 +49,16 @@ class AudioDownload {
 
     static async do(items, metadata = {}) {
         if (!Array.isArray(items)) items = [items];
-        var trackMetadata = {...metadata, track: metadata.track || 1};
+        var trackMetadata = {...metadata, track: metadata.track || 1},
+            report = new DownloadReport;
         for (let item of items) {
-            await (await AudioDownload.fromTrack(item, trackMetadata)).do();
-            trackMetadata.track++;
+            try {
+                await (await AudioDownload.fromTrack(item, trackMetadata)).do();
+                trackMetadata.track++;
+            }
+            catch (e) { report.reportSkipped(item, e); }
         }
+        report.summary;
     }
 
     _mktemp(filename) {
@@ -84,4 +89,26 @@ class AudioDownload {
     static TEMPDIR = '/tmp/Android.Tube';
 
     static PREFERRED_FORMATS = PREFERRED_FORMATS;
+}
+
+
+class DownloadReport {
+    constructor() {
+        this.skipped = [];
+    }
+
+    reportSkipped(item, error) {
+        var desc = `${YoutubeItem.id(item)} ${YoutubeItem.title(item) || '(untitled)'}`;
+        console.error(e); console.warn(`skipping track ${desc}`);
+        this.skipped.push({item, desc, error});
+    }
+
+    summary() {
+        if (this.skipped.length) {
+            console.warn(`skipped ${this.skipped.length} tracks:`);
+            for (let skip of this.skipped) {
+                console.warn(` - ${skip.desc}`, skip);
+            }
+        }
+    }
 }
