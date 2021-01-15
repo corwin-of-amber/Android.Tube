@@ -157,7 +157,9 @@ var app;
 $(function() {
     app = new Vue({
         el: '#ui-container',
-        data: {curPlaying: undefined, playlist: undefined, playlists: [], status: 'ready', uploading: undefined,
+        data: {curPlaying: undefined, playlist: undefined, playlists: [],
+               status: 'ready',
+               ongoing: {upload: undefined, download: undefined},
                show: {playlist: true, playlists: false}},
         template: `
             <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
@@ -165,13 +167,15 @@ $(function() {
                 <control-panel ref="controls" :show="show"/>
                 <search-ui ref="search" @selected="watch" :active="curPlaying"/>
                 <playlist-ui v-if="playlist && show.playlist"
-                    ref="playlist" :playlist="playlist" :show="show"
+                    ref="playlist" v-model="playlist" :show="show"
                     @selected="watch" :active="curPlaying"/>
                 <playlist-ui-index v-if="show.playlists"
                     ref="playlists" :playlists="playlists"
                     @selected="loadPlaylist" :active="playlist && playlist.id"/>
-                <div v-if="uploading" class="upload-progress">{{uploading.filename}}
-                    <span v-if="uploading.progress">{{(100 * uploading.progress.uploaded / uploading.progress.total).toFixed(1)}}%</span>
+                <div v-if="ongoing.upload" class="upload-progress">{{ongoing.upload.filename}}
+                    <span v-if="ongoing.upload.progress">{{(100 * ongoing.upload.progress.uploaded / ongoing.upload.progress.total).toFixed(1)}}%</span>
+                </div>
+                <div v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
                 </div>
                 <app-context-menu v-if="hasContextMenu" ref="menu" @action="menuAction"/>
             </div>
@@ -212,43 +216,40 @@ $(function() {
                     .then(function() { self.status = 'playing'; });
             },
 
-            openPlaylist(playlist) {
-                if (!(playlist instanceof Playlist))
-                    playlist = Playlist.from(playlist);
-                this.playlist = playlist;
+            newPlaylist() {
+                this.$refs.playlist.newPlaylist();
                 this.show.playlist = true;
-                this.playlist.store();
+            },
+            openPlaylist(playlist) {
+                this.$refs.playlist.openPlaylist(playlist);
+                this.show.playlist = true;
             },
             loadPlaylist(entry, play) {
-                var self = this;
-                Playlist.loadFromServer(entry.id).then(function(playlist) {
-                    self.playlist = playlist;
+                this.$refs.playlist.loadPlaylist(entry.id).then(function(playlist) {
                     if (play && playerCore.watchFromList)
                         playerCore.watchFromList(playlist.export(0));
                 });
             },
-
             importPlaylist(youtubePlaylistId) {
-                var self = this;
-                yapi.playlistItemsAll(youtubePlaylistId).then(function(items) {
-                    self.playlist = new Playlist('Imported').importYoutube(items);
-                });
+                this.$refs.playlist.importPlaylist(youtubePlaylistId);
+                this.show.playlist = true;
             },
 
             upload(file, name) {
                 var self = this;
                 if (file.type == 'application/json') {
-                    Playlist.upload(file).then(function(playlist) {
-                        self.playlist = playlist;
-                    });
+                    this.$refs.playlist.openPlaylist(file);
                 }
                 else if (file.type.match(/^(audio|video)[/]/) ||
                          file.name.match(/[.](mkv)$/)) {
-                    this.uploading = {filename: file.name, progress: undefined};
-                    return playerCore.upload(file, function(p) { 
-                        self.uploading.progress = p; 
-                    }, name)
-                    .finally(function() { self.uploading = undefined; });
+                    if (typeof process !== 'undefined') {
+                        this.$refs.playlist.addFile(file);
+                    }
+                    else {
+                        this.ongoing.upload = this._monitorProgress({filename: file.name});
+                        return playerCore.upload(file, this.ongoing.upload._update, name)
+                        .finally(function() { self.ongoing.upload = undefined; });
+                    }
                 }
                 else console.warn("unrecognized file type: " + file.type);
             },
@@ -279,6 +280,12 @@ $(function() {
                     this.$refs.playlist.dropAway(ev);
             },
 
+            _monitorProgress(obj) {
+                obj.progress = undefined;
+                obj._update = function(p) { obj.progress = p; };
+                return obj;
+            },
+
             connect() {
                 this.client = new ClientPlayerCore();
             },
@@ -286,6 +293,9 @@ $(function() {
             menuAction(action) {
                 if (action.for) action.for.action(action);
                 switch (action.type) {
+                case 'download':
+                    AudioDownload.do(action.for.item);
+                    break;
                 case 'connect':
                     this.connect();
                     break;
@@ -296,6 +306,13 @@ $(function() {
                         this.client.watch(item.uri || YoutubeItem.id(item));
                     }
                     break;
+                case 'play-remote-all':
+                    if (!this.client) this.connect();
+                    var item = action.for.item;
+                    if (item) {
+                        this.client.watchFromList(this.playlist.export(item));
+                    }
+                    break;                    
                 }
             },
         },

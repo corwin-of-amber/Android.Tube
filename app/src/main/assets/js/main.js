@@ -166,7 +166,7 @@ if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
     playerCore = new YtdlPlayerCore();
     yapi = new YouTubeSearch();
 }
-else if (typeof nw !== 'undefined' &&        /* In NWjs standalone app */
+else if (typeof process !== 'undefined' &&       /* In NWjs standalone app */
         !(location.search && location.search.length)) {
     playerCore = new YtdlPlayerCore([/^audio[/]webm; codecs="opus"/]);
     yapi = new YouTubeSearch();

@@ -7,6 +7,7 @@
       <hr/>
       <item name="connect">Connect to Remote</item>
       <item name="play-remote">Play on Remote</item>
+      <item name="play-remote-all">Play All on Remote</item>
     </vue-context>
 </template>
 

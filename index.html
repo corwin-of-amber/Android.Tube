@@ -3,6 +3,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        <script>if (typeof module === 'object') { module = undefined; /* Electron */ }</script>
+        
         <script src="node_modules/jquery/dist/jquery.js"></script>
         <script src="node_modules/lodash/lodash.js"></script>
 
@@ -34,5 +36,5 @@
     <script>$(() => {
         //app.$refs.search.search("bangles");
         app.$set(app.playlist, 'show', true);
-    });</script>
+       });</script>
 </html>

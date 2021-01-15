@@ -3,6 +3,7 @@
 
 Vue.component('playlist-ui', {
     props: ['playlist', 'active', 'show'],
+    model: {prop: 'playlist', event: 'change'},
     data: function() { return { dragState: undefined }; },
     template: `
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
@@ -29,6 +30,28 @@ Vue.component('playlist-ui', {
         this.$watch('playlist', function() { self.store(); }, {deep: true});
     },
     methods: {
+        newPlaylist() {
+            this.$emit('change', new Playlist());
+        },
+        openPlaylist(playlist) {
+            var self = this;
+            return Playlist.open(playlist).then(function(playlist) {
+                self.$emit('change', playlist); return playlist;
+            });
+        },
+        loadPlaylist(id) {
+            var self = this;
+            return Playlist.loadFromServer(id).then(function(playlist) {
+                self.$emit('change', playlist); return playlist;
+            });
+        },
+        importPlaylist(youtubePlaylistId) {
+            var self = this;
+            yapi.playlistItemsAll(youtubePlaylistId).then(function(items) {
+                self.$emit('change', new Playlist('Imported').importYoutube(items));
+            });
+        },
+
         dragOver(ev) {
             var item = ev.dataTransfer.getData("json");
             if (item) {
@@ -141,9 +164,11 @@ class Playlist {
     }
 
     add(item) {
-        var injectProps = {_playlist: this.id,
-                           _playlistItem: Playlist.mkShortId()}
-        this.tracks.push(Object.assign({}, item, injectProps));
+        item = Object.assign({}, item, {_playlist: this.id,
+                                        _playlistItem: Playlist.mkShortId()});
+        if (!item.id) item.id = Playlist.mkShortId();
+        this.tracks.push(item);
+        return item;
     }
 
     remove(item) {
@@ -153,6 +178,12 @@ class Playlist {
             return true;
         }
         else return false;
+    }
+
+    addFile(file) {
+        // @todo use URL.createObjectURL for blobs with no file:// access
+        return this.add({kind: Playlist.KIND.LOCAL, 
+            snippet: {title: file.name}, uri: 'file://' + file.path});
     }
 
     indexOf(item) {
@@ -173,6 +204,12 @@ class Playlist {
             if (!track._playlistItem) track._playlistItem = Playlist.mkShortId();
         }
         return pl;    
+    }
+
+    static open(data) {
+        return (data instanceof Blob) ? Playlist.upload(data) : 
+            Promise.resolve((data instanceof Playlist) ? data :
+                Playlist.from(data));
     }
 
     store(key) {
@@ -254,5 +291,5 @@ class Playlist {
 }
 
 
-Playlist.KIND = {DIRECT: 1, YOUTUBE: 2};
+Playlist.KIND = {DIRECT: 1, YOUTUBE: 2, LOCAL: 3};
 Playlist.DEFAULT_STORAGE_KEY = 'tube.playlist';

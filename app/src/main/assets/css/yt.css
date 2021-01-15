@@ -216,6 +216,12 @@ button[name="play-pause"] {
     min-width: 20px;    
 }
 
+.playlist-ui,
+.playlist-ui-index {
+    /* @todo only on narrow screen and only when search ui is visible */
+    padding-left: 0;
+}
+
 .playlist-ui h1,
 .playlist-ui-index h1 {
     font-size: 16px;
@@ -300,9 +306,13 @@ div#video-area {
     position: absolute;
     bottom: 0;
     left: 0;
-    backdrop-filter: brightness(1.5) blur(2px);
+    /* @todo only in audio mode */
+    backdrop-filter: blur(2px);
+    background-color: #fffc;
+    border-radius: 99px;
 }
 
 div#video-area audio {
     opacity: 0.5;  /* this is better when playing audio, and only the controls are shown */
+    outline: none;
 }
