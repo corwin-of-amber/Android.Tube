@@ -1,5 +1,6 @@
 {
     "name": "android-tube",
+    "version": "1.0.0",
     "main": "index.html",
     "webview": {
         "partitions": [
@@ -36,5 +37,8 @@
     },
     "scripts": {
         "build": "./build-js.sh"
+    },
+    "app": {
+        "icon": "app/src/desktop/img/Icon.icns"
     }
 }
