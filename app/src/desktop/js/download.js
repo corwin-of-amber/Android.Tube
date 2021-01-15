@@ -17,7 +17,10 @@ class AudioDownload {
         var outfile = this._filename(), id = this._id();
         console.log(`[download] ${id} ${outfile}`);
         var tmpfile = this._mktemp(`${this._id()}.dl.tmp`);
-        await this._fetch(tmpfile);
+        await Promise.all([
+            this._fetch(tmpfile),
+            this._fetchMetadata()
+        ]);
         outfile = this._mktemp(outfile);
         this.fixContainer(tmpfile, outfile, this.metadata).then(() => {
             try { fs.unlinkSync(tmpfile); } catch (e) { console.warn(e); }
@@ -29,6 +32,18 @@ class AudioDownload {
     async _fetch(outfile) {
         var abuf = await (await fetch(this.url)).arrayBuffer();
         fs.writeFileSync(outfile, new Uint8Array(abuf));
+    }
+
+    async _fetchMetadata() {
+        var id = this._id();
+        if (id) {
+            this.metadata['comment'] = JSON.stringify({youtube_id: id});
+            if (this.metadata['description'] === true) {
+                var snip = await yapi.snippet(this._id());
+                if (snip.description)
+                    this.metadata['description'] = snip.description;
+            }
+        }
     }
 
     fixContainer(infile, outfile, metadata={}) {

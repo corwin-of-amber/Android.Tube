@@ -13,7 +13,9 @@ class YouTubeSearch {
 
     constructor() {
         this.details = memoize1(this._details);
+        this.snippet = memoize1(this._snippet);
     }
+
     yapi(action, params) {
         var url=`${api_endpoint}/${action}?${$.param(params)}&key=${api_key}`;
         return new Promise(function(resolve, reject) {
@@ -64,10 +66,19 @@ class YouTubeSearch {
 
     _details(videoId) {
         return this.yapi('videos', {part: 'contentDetails', id: videoId})
-            .then(function(res) {
-                var item = res.items[0];
-                return item ? res.items[0].contentDetails : Promise.reject(`not found: '${videoId}'`);
-            });
+            .then(this._item('contentDetails'));
+    }
+
+    _snippet(videoId) {
+        return this.yapi('videos', {part: 'snippet', id: videoId})
+            .then(this._item('snippet'));
+    }
+
+    _item(prop) {
+        return function(res) {
+            var item = res.items[0];
+            return item ? res.items[0][prop] : Promise.reject(`not found: '${videoId}'`);
+        }
     }
 }
 
