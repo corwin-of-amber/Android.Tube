@@ -160,6 +160,16 @@ class YoutubeItem {
 }
 
 
+class YtdlPlayerInPageCore extends YtdlPlayerCore {
+    enqueue(tracks) {
+        if (!Array.isArray(tracks)) tracks = [tracks];
+        tracks.forEach(function(track) {
+            app.$refs.playlist.playlist.add(track);
+        });
+    }
+}
+
+
 var playerCore, yapi;
 
 if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
@@ -168,7 +178,7 @@ if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
 }
 else if (typeof process !== 'undefined' &&       /* In NWjs standalone app */
         !(location.search && location.search.length)) {
-    playerCore = new YtdlPlayerCore([/^audio[/]webm; codecs="opus"/]);
+    playerCore = new YtdlPlayerInPageCore([/^audio[/]webm; codecs="opus"/]);
     yapi = new YouTubeSearch();
 }
 else {                                           /* In client browser */

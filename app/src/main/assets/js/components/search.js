@@ -242,8 +242,8 @@ $(function() {
                 }
                 else if (file.type.match(/^(audio|video)[/]/) ||
                          file.name.match(/[.](mkv)$/)) {
-                    if (typeof process !== 'undefined') {
-                        this.$refs.playlist.addFile(file);
+                    if (typeof process !== 'undefined') {   // NWjs
+                        return Promise.resolve(Playlist.trackFromFile(file));
                     }
                     else {
                         this.ongoing.upload = this._monitorProgress({filename: file.name});

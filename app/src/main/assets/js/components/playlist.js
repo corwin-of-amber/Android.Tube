@@ -4,14 +4,17 @@
 Vue.component('playlist-ui', {
     props: ['playlist', 'active', 'show'],
     model: {prop: 'playlist', event: 'change'},
-    data: function() { return { dragState: undefined }; },
+    data: function() { return { dragState: undefined, dragItem: undefined, dragEdge: undefined }; },
     template: `
     <div class="playlist-ui" @dragover="dragOver" @dragleave="dragOut"
                 @drop="drop" :class="{['drag-'+dragState]: !!dragState}">
         <playlist-toolbox :show="show"/>
         <playlist-caption v-model="playlist.name"/>
         <div class="list playlist-body">
-            <div class="playlist-item" v-for="track in playlist.tracks">
+            <div v-for="(track,$idx) in playlist.tracks" :data-idx="$idx"
+                 class="playlist-item" 
+                 :class="{['drag-'+dragEdge]: !!dragState && dragItem == $idx}"
+                 @dragover="dragOverItem" @dragleave="dragLeaveItem">
                 <div class="gutter"/>
                 <video-snippet
                     :item="track" :active="itemId(track) === active"
@@ -53,15 +56,9 @@ Vue.component('playlist-ui', {
         },
 
         dragOver(ev) {
-            var item = ev.dataTransfer.getData("json");
-            if (item) {
-                item = JSON.parse(item);
-                if (item.id && item._playlist != this.playlist.id) {
-                    this.dragState = 'over';
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                }    
-            }
+            /** @todo ignore files when in client mode? */
+            this.dragState = 'over';
+            ev.preventDefault(); ev.stopPropagation();
         },
         dragOut(ev) { this.dragState = undefined; },
         drop(ev) {
@@ -88,6 +85,13 @@ Vue.component('playlist-ui', {
                 }
             }
         },
+
+        dragOverItem(ev) {
+            this.dragItem = ev.currentTarget.getAttribute('data-idx');
+            var bbox = ev.currentTarget.getBoundingClientRect(), y = ev.clientY;
+            this.dragEdge = y - bbox.top > bbox.height / 2 ? 'below' : 'above';
+        },
+        dragLeaveItem(ev) { ev.stopPropagation(); },
 
         itemId(item) { return YoutubeItem.id(item); },
 
@@ -181,9 +185,7 @@ class Playlist {
     }
 
     addFile(file) {
-        // @todo use URL.createObjectURL for blobs with no file:// access
-        return this.add({kind: Playlist.KIND.LOCAL, 
-            snippet: {title: file.name}, uri: 'file://' + file.path});
+        return this.add(Playlist.trackFromFile(file));
     }
 
     indexOf(item) {
@@ -245,6 +247,12 @@ class Playlist {
         return blob.text().then(function(text) {
             return Playlist.from(text);
         });
+    }
+
+    static trackFromFile(file) {
+        // @todo use URL.createObjectURL for blobs with no file:// access
+        return {kind: Playlist.KIND.LOCAL, 
+            snippet: {title: file.name}, uri: 'file://' + file.path};
     }
 
     /**

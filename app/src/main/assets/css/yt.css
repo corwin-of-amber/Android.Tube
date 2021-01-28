@@ -257,13 +257,23 @@ button[name="play-pause"] {
 }
 
 .playlist-ui.drag-over {
-    background: #eef;
+    background: #f4f4ff;
 }
 
 .playlist-ui.drag-over h1 {
     background: white;
     margin-top: 0;
-    padding-top: 25px;
+    padding-top: 16px;
+}
+
+.playlist-ui .playlist-item.drag-above {
+    border-top: 2px solid blue;
+    margin-top: -2px;
+}
+
+.playlist-ui .playlist-item.drag-below {
+    border-bottom: 2px solid blue;
+    margin-bottom: -2px;
 }
 
 .toolbox button {
