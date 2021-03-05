@@ -2,7 +2,7 @@
 
 
 Vue.component('playlist-ui', {
-    props: ['playlist', 'active', 'show'],
+    props: ['playlist', 'active', 'show', 'uploadedTrackIds'],
     model: {prop: 'playlist', event: 'change'},
     data: function() { return { dragState: undefined, dragItem: undefined, dragEdge: undefined }; },
     template: `
@@ -11,10 +11,12 @@ Vue.component('playlist-ui', {
         <playlist-toolbox :show="show"/>
         <playlist-caption v-model="playlist.name"/>
         <div class="list playlist-body">
-            <div v-for="(track,$idx) in playlist.tracks" :data-idx="$idx"
+            <div v-for="(track,$idx) in playlist.tracks"
                  class="playlist-item" 
-                 :class="{['drag-'+dragEdge]: !!dragState && dragItem == $idx}"
-                 @dragover="dragOverItem" @dragleave="dragLeaveItem">
+                 :class="{['drag-'+dragEdge]: !!dragState && dragItem === track,
+                           uploaded: (uploadedTrackIds || []).includes(track.id)}"
+                 @dragover="dragOverItem(track, $event)" @dragleave="dragLeaveItem"
+                 @drop="dropItem(track, $event)">
                 <div class="gutter"/>
                 <video-snippet
                     :item="track" :active="itemId(track) === active"
@@ -86,12 +88,25 @@ Vue.component('playlist-ui', {
             }
         },
 
-        dragOverItem(ev) {
-            this.dragItem = ev.currentTarget.getAttribute('data-idx');
+        dragOverItem(track, ev) {
+            this.dragItem = track; //ev.currentTarget.getAttribute('data-idx');
             var bbox = ev.currentTarget.getBoundingClientRect(), y = ev.clientY;
             this.dragEdge = y - bbox.top > bbox.height / 2 ? 'below' : 'above';
         },
         dragLeaveItem(ev) { ev.stopPropagation(); },
+        dropItem(track, ev) {
+            var item = ev.dataTransfer.getData("json");
+            if (item) {
+                item = JSON.parse(item);
+                if (item._playlist === this.playlist.id) {
+                    var from = this.playlist.tracks.find(t => t.id == item.id);
+                    /** @ouch what if same id occurs in list more than once...? */
+                    if (from) {
+                        this.playlist.move(from, track, this.dragEdge);
+                    }
+                }
+            }
+        },
 
         itemId(item) { return YoutubeItem.id(item); },
 
@@ -182,6 +197,19 @@ class Playlist {
             return true;
         }
         else return false;
+    }
+
+    move(item, relativeTo, bearing="above") {
+        var fromIndex = this.tracks.indexOf(item);
+        if (fromIndex < 0) throw new Error('Playlist.move: source item not found');
+        var toIndex = this.tracks.indexOf(relativeTo);
+        if (toIndex < 0) throw new Error('Playlist.move: target item not found');
+        if (bearing == "below") toIndex++;
+        if (fromIndex !== toIndex) {
+            this.tracks.splice(fromIndex, 1);
+            if (toIndex > fromIndex) toIndex--; /* slightly evil */
+            this.tracks.splice(toIndex, 0, item);
+        }
     }
 
     addFile(file) {

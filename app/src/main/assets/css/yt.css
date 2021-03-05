@@ -267,13 +267,17 @@ button[name="play-pause"] {
 }
 
 .playlist-ui .playlist-item.drag-above {
-    border-top: 2px solid blue;
-    margin-top: -2px;
+    box-shadow: inset 0px  1px 0px 0px blue,
+                      0px -1px 0px 0px blue;
 }
 
 .playlist-ui .playlist-item.drag-below {
-    border-bottom: 2px solid blue;
-    margin-bottom: -2px;
+    box-shadow: inset 0px -1px 0px 0px blue,
+                      0px  1px 0px 0px blue;
+}
+
+.playlist-ui .playlist-item.uploaded .gutter {
+    background-color: #b9b9e6;
 }
 
 .toolbox button {

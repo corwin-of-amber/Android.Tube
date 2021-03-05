@@ -1,5 +1,7 @@
 <template>
     <vue-context ref="m" @action="$emit('action', $event)">
+      <item name="playlist-new">New playlist</item>
+      <hr/>
       <item name="copy-id">Copy ID</item>
       <item name="copy-url">Copy URL</item>
       <item name="set-global">Set as global variable</item>
@@ -8,6 +10,7 @@
       <item name="connect">Connect to Remote</item>
       <item name="play-remote">Play on Remote</item>
       <item name="play-remote-all">Play All on Remote</item>
+      <item name="upload">Upload</item>
     </vue-context>
 </template>
 

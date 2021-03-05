@@ -159,6 +159,7 @@ $(function() {
         el: '#ui-container',
         data: {curPlaying: undefined, playlist: undefined, playlists: [],
                status: 'ready',
+               uploadedTrackIds: [],
                ongoing: {upload: undefined, download: undefined},
                show: {playlist: true, playlists: false}},
         template: `
@@ -168,7 +169,7 @@ $(function() {
                 <search-ui ref="search" @selected="watch" :active="curPlaying"/>
                 <playlist-ui v-if="playlist && show.playlist"
                     ref="playlist" v-model="playlist" :show="show"
-                    @selected="watch" :active="curPlaying"/>
+                    @selected="watch" :active="curPlaying" :uploadedTrackIds="uploadedTrackIds"/>
                 <playlist-ui-index v-if="show.playlists"
                     ref="playlists" :playlists="playlists"
                     @selected="loadPlaylist" :active="playlist && playlist.id"/>
@@ -246,9 +247,9 @@ $(function() {
                         return Promise.resolve(Playlist.trackFromFile(file));
                     }
                     else {
-                        this.ongoing.upload = this._monitorProgress({filename: file.name});
-                        return playerCore.upload(file, this.ongoing.upload._update, name)
-                        .finally(function() { self.ongoing.upload = undefined; });
+                        return playerCore.upload.file(file, 
+                            this._monitorProgress('upload', {filename: file.name}),
+                            name);
                     }
                 }
                 else console.warn("unrecognized file type: " + file.type);
@@ -280,19 +281,27 @@ $(function() {
                     this.$refs.playlist.dropAway(ev);
             },
 
-            _monitorProgress(obj) {
+            _monitorProgress(prop /* 'upload'|'download' */, init = {}) {
+                var obj = init, o = this.ongoing;
                 obj.progress = undefined;
-                obj._update = function(p) { obj.progress = p; };
-                return obj;
+                o[prop] = obj;
+                return function(p, fn) {
+                    if (fn) obj.filename = fn;
+                    if (p) obj.progress = p; else o[prop] = undefined;
+                };
             },
 
             connect() {
                 this.client = new ClientPlayerCore();
+                this.uploadedTrackIds = this.client.upload.remoteKeys;
             },
 
             menuAction(action) {
                 if (action.for) action.for.action(action);
                 switch (action.type) {
+                case 'playlist-new':
+                    this.newPlaylist();
+                    break;
                 case 'download':
                     AudioDownload.do(action.for.item);
                     break;
@@ -302,6 +311,7 @@ $(function() {
                 case 'play-remote':
                     if (!this.client) this.connect();
                     var item = action.for.item;
+                    item = this.client.upload.remoteTracks.get(item.id) || item;
                     if (item) {
                         this.client.watch(item.uri || YoutubeItem.id(item));
                     }
@@ -309,10 +319,20 @@ $(function() {
                 case 'play-remote-all':
                     if (!this.client) this.connect();
                     var item = action.for.item;
+                    item = item.remote || item;
                     if (item) {
                         this.client.watchFromList(this.playlist.export(item));
                     }
-                    break;                    
+                    break;
+                case 'upload':
+                    if (!this.client) this.connect();
+                    var item = action.for.item,
+                        idx = this.playlist ? this.playlist.tracks.indexOf(item) : 0;
+                    if (item) {
+                        this.client.upload.tracks([item],
+                            this._monitorProgress('upload'), Math.max(idx, 0));
+                    }
+                    break;
                 }
             },
         },

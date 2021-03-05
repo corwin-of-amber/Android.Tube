@@ -36,7 +36,8 @@
         "browserify": "^16.5.1"
     },
     "scripts": {
-        "build": "./build-js.sh"
+        "build": "./build-js.sh",
+        "dev": "kremlin -w app/src/main/js/ui.ts"
     },
     "app": {
         "icon": "app/src/desktop/img/Icon.icns"
