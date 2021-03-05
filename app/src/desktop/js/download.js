@@ -44,6 +44,12 @@ class AudioDownload {
                     this.metadata['description'] = snip.description;
             }
         }
+        if (!this.metadata['title']) {
+            var title = this._title();
+            if (title) {
+                this.metadata['title'] = title;
+            }
+        }
     }
 
     fixContainer(infile, outfile, metadata={}) {
@@ -85,20 +91,26 @@ class AudioDownload {
         return YoutubeItem.id(this.info); 
     }
 
-    _filename() {
-        var title;
+    _title() {
         if (this.info && this.info.snippet)
-            title = this.info.snippet.title;
-        else
-            title = this._id();
-        title = title.replace(/[/]/g, ':');  // sanitize
-        return `${title}.m4a`;  /** @todo choose extension */
+            return this._unhtml(this.info.snippet.title);    
+    }
+
+    _filename() {
+        var fn = this._title() || this._id() || 'untitled';
+        fn = fn.replace(/[/]/g, ':');  // sanitize
+        return `${fn}.m4a`;  /** @todo choose extension */
     }
 
     _metadataFlags(metadata) {
         const mdflag = '-metadata';
         return [].concat(...Object.entries(metadata)
                             .map(([k,v]) => [mdflag, `${k}=${v}`]));
+    }
+
+    _unhtml(html) {
+        return new DOMParser().parseFromString(html, 'text/html')
+                .documentElement.textContent
     }
 
     static TEMPDIR = '/tmp/Android.Tube';
