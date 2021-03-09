@@ -21,14 +21,14 @@ Vue.component('search-button', {
 });
 
 Vue.component('video-snippet', {
-    props: ['item', 'active'],
+    props: ['item', 'spotlight'],
     data() { return {duration: undefined}; },
     created() { this.fetchDetails(); },
     watch: {
         item() { this.fetchDetails(); }
     },
     template: `
-        <p class="video-snippet" :class="{active: active}" @click="$emit('click')"
+        <p class="video-snippet" :class="spotlight || {}" @click="$emit('click')"
                 draggable="true" @dragstart="dragStart" @contextmenu.prevent="menu">
             <span class="title" v-html="item.snippet.title"/>
             <span class="duration" v-if="duration">{{timestamp(duration)}}</span>
@@ -95,7 +95,7 @@ Vue.component('video-snippet', {
 });
 
 Vue.component('search-ui', {
-    props: ['active'],
+    props: ['spotlight'],
     data: function() { return {
         searchQuery: '',
         searchResults: []
@@ -109,7 +109,7 @@ Vue.component('search-ui', {
             <div id="search-results" class="list">
                 <template v-for="item in searchResults">
                     <video-snippet v-if="itemKind(item) === 'youtube#video'"
-                        :item="item" :active="itemId(item) === active"
+                        :item="item" :spotlight="spotlightOf(itemId(item))"
                         @click="$emit('selected', item)"
                         @swipe="$emit('swipe', item)"/>
                 </template>
@@ -141,6 +141,11 @@ Vue.component('search-ui', {
         },
         selectAll() {
             this.$refs.query.select();
+        },
+
+        spotlightOf(id) {
+            return id ? {active:  id === this.spotlight.active,
+                         focused: id === this.spotlight.focused} : {};
         }
     },
     watch: {
@@ -161,15 +166,16 @@ $(function() {
                status: 'ready',
                uploadedTrackIds: [],
                ongoing: {upload: undefined, download: undefined},
-               show: {playlist: true, playlists: false}},
+               show: {playlist: true, playlists: false},
+               init: false},
         template: `
             <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
                 <volume-control ref="volume"/>
                 <control-panel ref="controls" :show="show"/>
-                <search-ui ref="search" @selected="watch" :active="curPlaying"/>
+                <search-ui ref="search" @selected="watch" :spotlight="spotlight"/>
                 <playlist-ui v-if="playlist && show.playlist"
                     ref="playlist" v-model="playlist" :show="show"
-                    @selected="watch" :active="curPlaying" :uploadedTrackIds="uploadedTrackIds"/>
+                    @selected="watch" :spotlight="spotlight" :uploadedTrackIds="uploadedTrackIds"/>
                 <playlist-ui-index v-if="show.playlists"
                     ref="playlists" :playlists="playlists"
                     @selected="loadPlaylist" :active="playlist && playlist.id"/>
@@ -194,9 +200,13 @@ $(function() {
             this.$refs.controls.$watch('status', function(status) {
                 if (status.track) self.curPlaying = status.track;
             });
+
+            this.init = true; // enable computed prop `focused` that was delayed until now to give `$refs.menu` a chance to load
         },
         computed: {
-            hasContextMenu() { return typeof AppContextMenu != 'undefined'; }
+            hasContextMenu() { return typeof AppContextMenu != 'undefined'; },
+            focused() { var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); },
+            spotlight() { return {active: this.curPlaying, focused: this.focused}; }
         },
         methods: {
             search(query) {
@@ -297,7 +307,7 @@ $(function() {
             },
 
             menuAction(action) {
-                if (action.for) action.for.action(action);
+                if (action.for) action.for.action(action); /** @oops oh my */
                 switch (action.type) {
                 case 'playlist-new':
                     this.newPlaylist();

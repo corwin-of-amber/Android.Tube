@@ -2,7 +2,7 @@
 
 
 Vue.component('playlist-ui', {
-    props: ['playlist', 'active', 'show', 'uploadedTrackIds'],
+    props: ['playlist', 'spotlight', 'show', 'uploadedTrackIds'],
     model: {prop: 'playlist', event: 'change'},
     data: function() { return { dragState: undefined, dragItem: undefined, dragEdge: undefined }; },
     template: `
@@ -19,7 +19,7 @@ Vue.component('playlist-ui', {
                  @drop="dropItem(track, $event)">
                 <div class="gutter"/>
                 <video-snippet
-                    :item="track" :active="itemId(track) === active"
+                    :item="track" :spotlight="spotlightOf(itemId(track))"
                     @click="$emit('selected', track)"/>
             </div>
         </div>
@@ -55,6 +55,11 @@ Vue.component('playlist-ui', {
             yapi.playlistItemsAll(youtubePlaylistId).then(function(items) {
                 self.$emit('change', new Playlist('Imported').importYoutube(items));
             });
+        },
+
+        spotlightOf(id) { /** @oops duplicated from <search-ui> */
+            return id ? {active:  id === this.spotlight.active,
+                         focused: id === this.spotlight.focused} : {};
         },
 
         dragOver(ev) {

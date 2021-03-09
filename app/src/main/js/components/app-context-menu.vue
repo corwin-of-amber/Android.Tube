@@ -8,9 +8,12 @@
       <item name="download">Download</item>
       <hr/>
       <item name="connect">Connect to Remote</item>
-      <item name="play-remote">Play on Remote</item>
-      <item name="play-remote-all">Play All on Remote</item>
-      <item name="upload">Upload</item>
+      <item name="play-remote">Play on Remote
+        <button class="companion" name="play-remote-all">↧</button>
+      </item>
+      <item name="upload">Upload
+        <button class="companion" name="upload-all">↧</button>
+      </item>
     </vue-context>
 </template>
 
@@ -20,6 +23,9 @@ import MenuItem from './context-menu-item.vue';
 
 export default {
     components: {VueContext, item: MenuItem},
+    computed: {
+        for() { return this.$refs.m.for; }
+    },
     methods: {
         open(...args) { this.$refs.m.open(...args); }
     }
