@@ -1,6 +1,6 @@
 <template>
-    <vue-context ref="m" @action="$emit('action', $event)">
-      <item name="playlist-new">New playlist</item>
+    <context-menu ref="m" @action="$emit('action', $event)">
+      <li name="playlist-new">New playlist</li>
       <hr/>
       <item name="copy-id">Copy ID</item>
       <item name="copy-url">Copy URL</item>
@@ -8,21 +8,21 @@
       <item name="download">Download</item>
       <hr/>
       <item name="connect">Connect to Remote</item>
-      <item name="play-remote">Play on Remote
-        <button class="companion" name="play-remote-all">↧</button>
+      <item name="play-remote" class="has-companion"><span>Play on Remote</span>
+          <button class="companion" name="play-remote-all">↧</button>
       </item>
-      <item name="upload">Upload
+      <item name="upload" class="has-companion"><span>Upload</span>
         <button class="companion" name="upload-all">↧</button>
       </item>
-    </vue-context>
+    </context-menu>
 </template>
 
 <script>
-import VueContext from './context-menu.vue';
+import ContextMenu from './context-menu.vue';
 import MenuItem from './context-menu-item.vue';
 
 export default {
-    components: {VueContext, item: MenuItem},
+    components: {ContextMenu, item: MenuItem},
     computed: {
         for() { return this.$refs.m.for; }
     },

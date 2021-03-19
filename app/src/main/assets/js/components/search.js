@@ -185,6 +185,7 @@ $(function() {
                 <div v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
                 </div>
                 <app-context-menu v-if="hasContextMenu" ref="menu" @action="menuAction"/>
+                <app-other-menu v-if="hasContextMenu" ref="otherMenu" theme="compact" @action="menuAction"/>
             </div>
         `,
         mounted() {

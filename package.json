@@ -21,7 +21,7 @@
         "lodash": "^4.17.19",
         "mkdirp": "^1.0.4",
         "vue": "^2.6.11",
-        "vue-context": "^6.0.0",
+        "vue-context-menu": "^2.0.6",
         "ws": "^7.3.0",
         "ytdl-core": "^4.1.2"
     },
