@@ -56,6 +56,18 @@ Vue.component('playlist-ui', {
                 self.$emit('change', new Playlist('Imported').importYoutube(items));
             });
         },
+        importTracks(youtubeItem) {
+            if (typeof youtubeItem == 'string') youtubeItem = {id: youtubeItem};
+            var self = this,
+                t = new TrackSplitInfo(youtubeItem); /* ui/tracks.ts */
+            playerCore.getWatchUrl(YoutubeItem.id(youtubeItem)).then(function(webm) {
+                return t.fetchTracks(webm.url)
+            }).then(function(tracks) {
+                var pl = new Playlist(YoutubeItem.title(youtubeItem) || 'Imported Tracks');
+                pl.tracks = tracks;
+                self.$emit('change', pl);
+            });
+        },
 
         spotlightOf(id) { /** @oops duplicated from <search-ui> */
             return id ? {active:  id === this.spotlight.active,

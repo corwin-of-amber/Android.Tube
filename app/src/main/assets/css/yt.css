@@ -148,6 +148,10 @@ input[type="range"]:focus {
     background: #f3f3f3;
 }
 
+.video-snippet.active.focused {
+    background: #6d6dff;
+}
+
 .pending .video-snippet.active {
     animation: pulse-animation 1s steps(20, start) infinite;
 }

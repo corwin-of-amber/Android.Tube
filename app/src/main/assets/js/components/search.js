@@ -185,7 +185,6 @@ $(function() {
                 <div v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
                 </div>
                 <app-context-menu v-if="hasContextMenu" ref="menu" @action="menuAction"/>
-                <app-other-menu v-if="hasContextMenu" ref="otherMenu" theme="compact" @action="menuAction"/>
             </div>
         `,
         mounted() {
@@ -244,6 +243,10 @@ $(function() {
             },
             importPlaylist(youtubePlaylistId) {
                 this.$refs.playlist.importPlaylist(youtubePlaylistId);
+                this.show.playlist = true;
+            },
+            importTracks(item) {
+                this.$refs.playlist.importTracks(item);
                 this.show.playlist = true;
             },
 
@@ -312,6 +315,9 @@ $(function() {
                 switch (action.type) {
                 case 'playlist-new':
                     this.newPlaylist();
+                    break;
+                case 'set-global':
+                    console.log('temp1', window.temp1 = action.for.item);
                     break;
                 case 'download':
                     AudioDownload.do(action.for.item);
