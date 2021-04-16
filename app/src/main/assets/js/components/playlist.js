@@ -57,12 +57,13 @@ Vue.component('playlist-ui', {
             });
         },
         importTracks(youtubeItem) {
-            if (typeof youtubeItem == 'string') youtubeItem = {id: youtubeItem};
             var self = this,
-                t = new TrackSplitInfo(youtubeItem); /* ui/tracks.ts */
-            playerCore.getWatchUrl(YoutubeItem.id(youtubeItem)).then(function(webm) {
-                return t.fetchTracks(webm.url)
-            }).then(function(tracks) {
+                ts = typeof youtubeItem == 'string' ?
+                    TrackSplit.fromYouTubeId(youtubeItem) :  /* ui/tracks.ts */
+                    TrackSplit.fromTrack(youtubeItem);
+
+            ts.then(function(ts) { return ts.fetchTracks(); })
+            .then(function(tracks) {
                 var pl = new Playlist(YoutubeItem.title(youtubeItem) || 'Imported Tracks');
                 pl.tracks = tracks;
                 self.$emit('change', pl);

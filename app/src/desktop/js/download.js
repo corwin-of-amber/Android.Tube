@@ -11,20 +11,31 @@ class AudioDownload {
             this.url = url;
         this.info = info;
         this.metadata = metadata;
+        this.interval = this._extractInterval(this.url);
     }
 
     async do() {
         var outfile = this._filename(), id = this._id();
         console.log(`[download] ${id} ${outfile}`);
-        var tmpfile = this._mktemp(`${this._id()}.dl.tmp`);
-        await Promise.all([
-            this._fetch(tmpfile),
-            this._fetchMetadata()
-        ]);
-        outfile = this._mktemp(outfile);
-        this.fixContainer(tmpfile, outfile, this.metadata).then(() => {
-            try { fs.unlinkSync(tmpfile); } catch (e) { console.warn(e); }
-        });
+        if (this.interval) {    /* intervals must use `ffmpeg`'s fetch */
+            await this._fetchMetadata();
+            outfile = this._mktemp(outfile);
+            await this.fixContainer(this.url, outfile, this.metadata);
+        }
+        else {   /* fetch using browser API because it's faster */
+            var tmpfile = this._mktemp(`${this._id()}.dl.tmp`);
+            try {
+                await Promise.all([
+                    this._fetch(tmpfile),
+                    this._fetchMetadata()
+                ]);
+                outfile = this._mktemp(outfile);
+                await this.fixContainer(tmpfile, outfile, this.metadata);
+            }
+            finally {
+                try { fs.unlinkSync(tmpfile); } catch (e) { console.warn(e); }
+            }
+        }
         this.outfile = outfile;
         return outfile;
     }
@@ -56,7 +67,8 @@ class AudioDownload {
         var id = this._id();
         return new Promise((resolve, reject) =>
             ffmpeg(infile).audioCodec('copy')
-            .outputOption(...this._metadataFlags(metadata))
+            .inputOptions(this._intervalFlags(this.interval))
+            .outputOption(this._metadataFlags(metadata))
             .on('error', err => { console.error(`[download] ${id}`, err); reject(err); })
             .on('end', () => { console.log(`[download] ${id} converted.`); resolve(); })
             .saveToFile(outfile));
@@ -108,6 +120,16 @@ class AudioDownload {
                             .map(([k,v]) => [mdflag, `${k}=${v}`]));
     }
 
+    _intervalFlags(interval) {
+        return interval ? ['-ss', interval.from,
+                ...(interval.to ? ['-t', interval.to - interval.from] : [])] : [];
+    }
+
+    _extractInterval(uri) {
+        var mo = typeof uri == 'string' ? uri.match(/#t=(\d+),(\d+)?/) : null;
+        return mo && {from: +mo[1], to: +mo[2] || undefined};
+    }
+
     _unhtml(html) {
         return new DOMParser().parseFromString(html, 'text/html')
                 .documentElement.textContent
@@ -126,7 +148,7 @@ class DownloadReport {
 
     reportSkipped(item, error) {
         var desc = `${YoutubeItem.id(item)} ${YoutubeItem.title(item) || '(untitled)'}`;
-        console.error(e); console.warn(`skipping track ${desc}`);
+        console.error(error); console.warn(`skipping track ${desc}`);
         this.skipped.push({item, desc, error});
     }
 

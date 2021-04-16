@@ -1,6 +1,52 @@
 declare const yapi: any;
 declare const YoutubeItem: any;
+declare var playerCore: any;
+declare var PREFERRED_FORMATS: any;
 
+
+class TrackSplit {
+    url: string // Media URL
+    info: any
+    ti: TrackSplitInfo
+
+    constructor(url: string | {url: string}, info: any) {
+        this.url = typeof url === 'string' ? url : url.url;
+        this.info = info;
+        this.ti = new TrackSplitInfo(info);
+    }
+
+    async fetchTracks() {
+        var l = await this.ti.fetchTrackInfo();
+        return l.map(ti => this.exportTrack(ti));
+    }
+
+    exportTrack(trackInfo: TrackInfo) {
+        var from = this.ti._timestampSeconds(trackInfo.from),
+            to = trackInfo.to ? this.ti._timestampSeconds(trackInfo.to) : '',
+            duration = (typeof to === 'number') ? this._durationFrom(to - from) : undefined;
+        return {id: `${this.ti._id()}@${from}`, kind: 3,
+                snippet: trackInfo, contentDetails: {duration},
+                uri: `${this.url}#t=${from},${to}`};
+    }
+
+    static async fromTrack(item: any) {
+        return TrackSplit.fromYouTubeId(YoutubeItem.id(item), item);
+    }
+
+    static async fromYouTubeId(id: string, info={id}) {
+        return new TrackSplit(
+            await playerCore.getWatchUrl(id, '', TrackSplit.PREFERRED_FORMATS),
+                info);
+    }
+
+    _durationFrom(sec: number) {
+        var s = sec % 60, min = Math.floor(sec / 60),
+            m = min % 60, h = Math.floor(min / 60);
+        return h > 0 ? `PT${h}H${m}M${s}S` : `PT${m}M${s}S`;
+    }
+
+    static PREFERRED_FORMATS = undefined;
+}
 
 /**
  * Extracts sub-track information that is stored in YouTube's description
@@ -16,11 +62,6 @@ class TrackSplitInfo {
 
     constructor(info: any) {
         this.info = info
-    }
-
-    async fetchTracks(mediaUri: string) {
-        var l = await this.fetchTrackInfo();
-        return l.map(ti => this.exportTrack(ti, mediaUri));
     }
 
     async fetchTrackInfo() {
@@ -41,13 +82,6 @@ class TrackSplitInfo {
             }
         }
         if (cur) yield cur;
-    }
-
-    exportTrack(trackInfo: TrackInfo, mediaUri: string) {
-        var from = this._timestampSeconds(trackInfo.from),
-            to = trackInfo.to ? this._timestampSeconds(trackInfo.to) : '';
-        return {id: `${this._id()}@${from}`, kind: 3,
-            snippet: trackInfo, uri: `${mediaUri}#t=${from},${to}`};
     }
 
     _timestampFrom(mo: RegExpMatchArray) {
@@ -78,4 +112,4 @@ type TimeStamp = {h: number, m: number, s: number};
 type TrackInfo = {title: string, from: TimeStamp, to?: TimeStamp};
 
 
-export  { TrackSplitInfo }
+export  { TrackSplit, TrackSplitInfo }

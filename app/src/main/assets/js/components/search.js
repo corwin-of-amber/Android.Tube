@@ -184,7 +184,9 @@ $(function() {
                 </div>
                 <div v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
                 </div>
-                <app-context-menu v-if="hasContextMenu" ref="menu" @action="menuAction"/>
+                <span style="position: absolute" v-if="hasContextMenu"> <!-- @oops hack to enable using CSS ':last-of-type' :/ -->
+                    <app-context-menu ref="menu" @action="menuAction"/>
+                </span>
             </div>
         `,
         mounted() {
@@ -225,6 +227,15 @@ $(function() {
                 operation
                     .catch(function() { self.status = 'error'; })
                     .then(function() { self.status = 'playing'; });
+            },
+            playNext() {
+                if (this.curPlaying && this.playlist) {
+                    var index = this.playlist.tracks.findIndex(t => 
+                        YoutubeItem.id(t) === this.curPlaying);
+                    if (index >= 0 && index < this.playlist.tracks.length - 1) {
+                        this.watch(this.playlist.tracks[index + 1]);
+                    }
+                }
             },
 
             newPlaylist() {
