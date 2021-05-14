@@ -112,16 +112,44 @@ class ClientUploads {
         return {id: name, kind: 2, uri: `file:///music/${name}`};
     }
 
-    async tracks(tracks, progress, startIndex = 0) {
-        var i = startIndex;
+    /**
+     * 
+     * @param {Array} tracks list of tracks to upload
+     * @param {Function} progress
+     *  upload progress callback; `({total, uploaded}, title) => void`
+     * @param {*} startIndex index of first track (tracks[0]) in playlist
+     * @param {*} force `true` to upload even if track has been previously 
+     *  uploaded. (default `false`)
+     * @param {*} play `'play'` to start playing once first track is uploaded;
+     *  `'enqueue'` to add to the end of the current play queue (if any);
+     *  `undefined` (the default) to just upload.
+     */
+    async tracks(tracks, progress, startIndex = 0, force = false, play = undefined) {
+        var i = startIndex, start = (play === 'play');
         for (let track of tracks) {
-            var title = YoutubeItem.title(track) || 'untitled',
-                ufile = new File(track.uri.replace(/^file:\/\//, ''), title);
+            let id = YoutubeItem.id(track);
+            if ((force || !this.remoteTracks.get(id)) && 
+                YoutubeItem.kind(track) == Playlist.KIND.LOCAL) {
+                var title = YoutubeItem.title(track) || 'untitled',
+                    ufile = new File(track.uri.replace(/^file:\/\//, ''), title);
 
-            progress({}, title);
-            this._set(track.id,
-                await this.file(ufile, progress, `c${i++}`));
+                progress({}, title);
+                this._set(track.id,
+                    await this.file(ufile, progress, `c${i}`));
+            }
+            if (play) {
+                this._play(track, start);
+                start = false; // next one will enqueue
+            }
+            i++;
         }
+    }
+
+    _play(track, start) {
+        let id = YoutubeItem.id(track),
+            item = this.remoteTracks.get(id) || track;
+        start ? this.client.watch(item.uri || id)
+              : this.client.enqueue(item);
     }
 
     _set(key, value) {

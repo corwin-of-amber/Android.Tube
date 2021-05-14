@@ -76,7 +76,8 @@ class AudioDownload {
 
     static async fromTrack(item, metadata = {}) {
         return new AudioDownload(
-            await playerCore.getWatchUrl(YoutubeItem.id(item), '', AudioDownload.PREFERRED_FORMATS),
+            await playerCore.getWatchUrl(YoutubeItem.mediaUriOrId(item), '',
+                                         AudioDownload.PREFERRED_FORMATS),
             item, metadata);
     }
 

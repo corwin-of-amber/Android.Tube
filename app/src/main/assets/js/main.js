@@ -154,8 +154,11 @@ class YoutubeItem {
     static title(item) {
         return item.snippet && item.snippet.title;
     }
-    static url(item) {
-        return `https://youtube.com/watch?v=${YoutubeItem.id(item)}`;
+    static mediaUriOrId(item) {
+        return item.uri || YoutubeItem.id(item);
+    }
+    static webUrl(item) {
+        return item.uri || `https://youtube.com/watch?v=${YoutubeItem.id(item)}`;
     }
 }
 

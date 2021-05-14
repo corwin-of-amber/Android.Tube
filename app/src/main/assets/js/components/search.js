@@ -87,7 +87,7 @@ Vue.component('video-snippet', {
             }
             switch (action.type) {
             case 'copy-id': copy(YoutubeItem.id(this.item)); break;
-            case 'copy-url': copy(YoutubeItem.url(this.item)); break;
+            case 'copy-url': copy(YoutubeItem.webUrl(this.item)); break;
             case 'set-global': window.sel = this.item; break;
             }
         }
@@ -262,22 +262,23 @@ $(function() {
             },
 
             upload(file, name) {
-                var self = this;
+                var hasFS = (typeof process !== 'undefined');   // NWjs
                 if (file.type == 'application/json') {
                     this.$refs.playlist.openPlaylist(file);
                 }
                 else if (file.type.match(/^(audio|video)[/]/) ||
                          file.name.match(/[.](mkv)$/)) {
-                    if (typeof process !== 'undefined') {   // NWjs
-                        return Promise.resolve(Playlist.trackFromFile(file));
+                    if (hasFS) {
+                        return Promise.resolve([Playlist.trackFromFile(file)]);
                     }
                     else {
                         return playerCore.upload.file(file, 
                             this._monitorProgress('upload', {filename: file.name}),
-                            name);
+                            name).then(x => [x]);
                     }
                 }
                 else console.warn("unrecognized file type: " + file.type);
+                return Promise.resolve([]);
             },
 
             uploadMultiple(files) {
@@ -285,23 +286,28 @@ $(function() {
                 for (var i = 0; i < files.length; i++) {
                     conts.push((function(f, id) {
                         return function() {
-                            return _this.upload(f, id).then(function(track) {
-                                console.log('enqueue', track);
-                                playerCore.enqueue(track);
+                            return _this.upload(f, id).then(function(tracks) {
+                                console.log('enqueue', tracks);
+                                playerCore.enqueue(tracks);
                             });
                         }
                     })(files[i], 'c'+i));
                 }
-                conts.reduce(function(p, cont) {
-                    return p.then(cont);
-                }, Promise.resolve());
+                waterfall(conts);
+            },
+
+            droppedFiles(dt) {
+                var _this = this;
+                DroppedFiles.fromDataTransfer(dt).then(function(files) {
+                    _this.uploadMultiple(files);
+                });
             },
 
             dragOver(ev) { ev.preventDefault(); },
             drop(ev) {
                 ev.preventDefault();
                 if (ev.dataTransfer.files.length > 0)
-                    this.uploadMultiple(ev.dataTransfer.files)
+                    this.droppedFiles(ev.dataTransfer);
                 else if (this.$refs.playlist)
                     this.$refs.playlist.dropAway(ev);
             },
@@ -338,10 +344,12 @@ $(function() {
                     break;
                 case 'play-remote':
                     if (!this.client) this.connect();
-                    var item = action.for.item;
-                    item = this.client.upload.remoteTracks.get(item.id) || item;
+                    var item = action.for.item,
+                        idx = this.playlist ? this.playlist.tracks.indexOf(item) : 0;
                     if (item) {
-                        this.client.watch(item.uri || YoutubeItem.id(item));
+                        this.client.upload.tracks([item],
+                            this._monitorProgress('upload'), Math.max(idx, 0),
+                            false, 'play');
                     }
                     break;
                 case 'play-remote-all':
@@ -358,7 +366,8 @@ $(function() {
                         idx = this.playlist ? this.playlist.tracks.indexOf(item) : 0;
                     if (item) {
                         this.client.upload.tracks([item],
-                            this._monitorProgress('upload'), Math.max(idx, 0));
+                            this._monitorProgress('upload'), Math.max(idx, 0),
+                            true /* force upload */);
                     }
                     break;
                 }
@@ -367,6 +376,12 @@ $(function() {
         components: typeof AppContextMenu == 'undefined' ? {} : {AppContextMenu}
     });
 });
+
+function waterfall(conts) {
+    return conts.reduce(function(p, cont) {
+        return p.then(cont);
+    }, Promise.resolve());
+}
 
 // Prevents window from moving on touch on newer browsers.
 var SCROLLABLE_ELEMS = '.search-ui, .playlist-ui, .playlist-ui-index';

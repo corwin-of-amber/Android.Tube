@@ -1,7 +1,4 @@
 declare const yapi: any;
-declare const YoutubeItem: any;
-declare var playerCore: any;
-declare var PREFERRED_FORMATS: any;
 
 
 class TrackSplit {
@@ -24,19 +21,19 @@ class TrackSplit {
         var from = this.ti._timestampSeconds(trackInfo.from),
             to = trackInfo.to ? this.ti._timestampSeconds(trackInfo.to) : '',
             duration = (typeof to === 'number') ? this._durationFrom(to - from) : undefined;
-        return {id: `${this.ti._id()}@${from}`, kind: 3,
+        return {id: `${this.ti._id()}@${from}`, kind: Playlist.KIND.DIRECT,
                 snippet: trackInfo, contentDetails: {duration},
                 uri: `${this.url}#t=${from},${to}`};
     }
 
-    static async fromTrack(item: any) {
+    static async fromTrack(item: Playlist.Item) {
         return TrackSplit.fromYouTubeId(YoutubeItem.id(item), item);
     }
 
-    static async fromYouTubeId(id: string, info={id}) {
+    static async fromYouTubeId(id: string, info: any = {id}) {
         return new TrackSplit(
             await playerCore.getWatchUrl(id, '', TrackSplit.PREFERRED_FORMATS),
-                info);
+            info);
     }
 
     _durationFrom(sec: number) {
