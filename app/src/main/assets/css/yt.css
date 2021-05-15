@@ -317,7 +317,8 @@ button[name="play-pause"] {
     background: #eef;
 }
 
-.upload-progress {
+.upload-progress,
+.download-progress {
     position: absolute;
     bottom: 15px;
     left: 5px;

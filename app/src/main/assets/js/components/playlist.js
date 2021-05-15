@@ -117,7 +117,8 @@ Vue.component('playlist-ui', {
             if (item) {
                 item = JSON.parse(item);
                 if (item._playlist === this.playlist.id) {
-                    var from = this.playlist.tracks.find(t => t.id == item.id);
+                    var from = this.playlist.tracks.find(t =>
+                        YoutubeItem.id(t) == YoutubeItem.id(item));
                     /** @ouch what if same id occurs in list more than once...? */
                     if (from) {
                         this.playlist.move(from, track, this.dragEdge);

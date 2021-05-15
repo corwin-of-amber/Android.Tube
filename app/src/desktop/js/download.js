@@ -14,9 +14,10 @@ class AudioDownload {
         this.interval = this._extractInterval(this.url);
     }
 
-    async do() {
+    async do(progress = () => {}) {
         var outfile = this._filename(), id = this._id();
         console.log(`[download] ${id} ${outfile}`);
+        progress({id}, outfile);
         if (this.interval) {    /* intervals must use `ffmpeg`'s fetch */
             await this._fetchMetadata();
             outfile = this._mktemp(outfile);
@@ -81,18 +82,21 @@ class AudioDownload {
             item, metadata);
     }
 
-    static async do(items, metadata = {}) {
+    static async do(items, metadata = {}, progress = () => {}) {
         if (!Array.isArray(items)) items = [items];
         var trackMetadata = {...metadata, track: metadata.track || 1},
             report = new DownloadReport;
         for (let item of items) {
+            progress({}, YoutubeItem.title(item) || YoutubeItem.id(item) || '...');
             try {
-                await (await AudioDownload.fromTrack(item, trackMetadata)).do();
+                await (await AudioDownload.fromTrack(item, trackMetadata)).do(progress);
                 trackMetadata.track++;
             }
             catch (e) { report.reportSkipped(item, e); }
         }
-        report.summary;
+        report.summary();
+        progress(null);
+        return report;
     }
 
     _mktemp(filename) {

@@ -179,12 +179,13 @@ $(function() {
                 <playlist-ui-index v-if="show.playlists"
                     ref="playlists" :playlists="playlists"
                     @selected="loadPlaylist" :active="playlist && playlist.id"/>
-                <div v-if="ongoing.upload" class="upload-progress">{{ongoing.upload.filename}}
+                <!-- @oops using span to enable using CSS ':last-of-type' on divs :/ -->
+                <span v-if="ongoing.upload" class="upload-progress">{{ongoing.upload.filename}}
                     <span v-if="ongoing.upload.progress">{{(100 * ongoing.upload.progress.uploaded / ongoing.upload.progress.total).toFixed(1)}}%</span>
-                </div>
-                <div v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
-                </div>
-                <span style="position: absolute" v-if="hasContextMenu"> <!-- @oops hack to enable using CSS ':last-of-type' :/ -->
+                </span>
+                <span v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
+                </span>
+                <span style="position: absolute" v-if="hasContextMenu">
                     <app-context-menu ref="menu" @action="menuAction"/>
                 </span>
             </div>
@@ -314,6 +315,7 @@ $(function() {
 
             _monitorProgress(prop /* 'upload'|'download' */, init = {}) {
                 var obj = init, o = this.ongoing;
+                obj.filename = obj.filename; // huh
                 obj.progress = undefined;
                 o[prop] = obj;
                 return function(p, fn) {
@@ -337,7 +339,8 @@ $(function() {
                     console.log('temp1', window.temp1 = action.for.item);
                     break;
                 case 'download':
-                    AudioDownload.do(action.for.item);
+                    AudioDownload.do(action.for.item, {},
+                        this._monitorProgress('download'));
                     break;
                 case 'connect':
                     this.connect();
