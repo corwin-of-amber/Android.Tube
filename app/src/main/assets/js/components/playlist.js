@@ -117,9 +117,7 @@ Vue.component('playlist-ui', {
             if (item) {
                 item = JSON.parse(item);
                 if (item._playlist === this.playlist.id) {
-                    var from = this.playlist.tracks.find(t =>
-                        YoutubeItem.id(t) == YoutubeItem.id(item));
-                    /** @ouch what if same id occurs in list more than once...? */
+                    var from = this.playlist.find(item);
                     if (from) {
                         this.playlist.move(from, track, this.dragEdge);
                     }
@@ -243,6 +241,10 @@ class Playlist {
                 : this.tracks.findIndex(function(e) { return JSON.stringify(e.id) === id; });
     }
 
+    find(item) {
+        return this.tracks[this.indexOf(item)];
+    }
+
     static from(props) {
         if (typeof props === 'string') props = JSON.parse(props);
         var pl = Object.assign(new Playlist, props || {});
@@ -252,7 +254,7 @@ class Playlist {
             if (!track._playlist)     track._playlist = pl.id;
             if (!track._playlistItem) track._playlistItem = Playlist.mkShortId();
         }
-        return pl;    
+        return pl;
     }
 
     static open(data) {

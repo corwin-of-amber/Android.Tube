@@ -125,7 +125,8 @@ class ClientUploads {
      *  `undefined` (the default) to just upload.
      */
     async tracks(tracks, progress, startIndex = 0, force = false, play = undefined) {
-        var i = startIndex, start = (play === 'play');
+        var i = startIndex, start = (play === 'play'),
+            uploadProgress = (p) => p && progress(p);
         for (let track of tracks) {
             let id = YoutubeItem.id(track);
             if ((force || !this.remoteTracks.get(id)) && 
@@ -135,7 +136,7 @@ class ClientUploads {
 
                 progress({}, title);
                 this._set(track.id,
-                    await this.file(ufile, progress, `c${i}`));
+                    await this.file(ufile, uploadProgress, `c${i}`));
             }
             if (play) {
                 this._play(track, start);
@@ -143,6 +144,7 @@ class ClientUploads {
             }
             i++;
         }
+        progress(undefined); // clear progress
     }
 
     _play(track, start) {

@@ -181,7 +181,7 @@ $(function() {
                     @selected="loadPlaylist" :active="playlist && playlist.id"/>
                 <!-- @oops using span to enable using CSS ':last-of-type' on divs :/ -->
                 <span v-if="ongoing.upload" class="upload-progress">{{ongoing.upload.filename}}
-                    <span v-if="ongoing.upload.progress">{{(100 * ongoing.upload.progress.uploaded / ongoing.upload.progress.total).toFixed(1)}}%</span>
+                    <span v-if="ongoing.upload.progress && ongoing.upload.progress.total">{{(100 * ongoing.upload.progress.uploaded / ongoing.upload.progress.total).toFixed(1)}}%</span>
                 </span>
                 <span v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
                 </span>
@@ -346,35 +346,43 @@ $(function() {
                     this.connect();
                     break;
                 case 'play-remote':
-                    if (!this.client) this.connect();
-                    var item = action.for.item,
-                        idx = this.playlist ? this.playlist.tracks.indexOf(item) : 0;
-                    if (item) {
-                        this.client.upload.tracks([item],
-                            this._monitorProgress('upload'), Math.max(idx, 0),
-                            false, 'play');
-                    }
+                    this.remotePlay(action.for.item, false, false, 'play');
                     break;
                 case 'play-remote-all':
-                    if (!this.client) this.connect();
-                    var item = action.for.item;
-                    item = item.remote || item;
-                    if (item) {
-                        this.client.watchFromList(this.playlist.export(item));
-                    }
+                    this.remotePlay(action.for.item, true, false, 'play');
                     break;
                 case 'upload':
-                    if (!this.client) this.connect();
-                    var item = action.for.item,
-                        idx = this.playlist ? this.playlist.tracks.indexOf(item) : 0;
-                    if (item) {
-                        this.client.upload.tracks([item],
-                            this._monitorProgress('upload'), Math.max(idx, 0),
-                            true /* force upload */);
-                    }
+                    this.remotePlay(action.for.item, false, true /* force upload */);
+                    break;
+                case 'upload-all':
+                    this.remotePlay(action.for.item, true, true /* force upload */);
                     break;
                 }
             },
+
+            remotePlay(item, all, force, play) {
+                if (!this.client) this.connect();
+                if (item) {
+                    var [idx, tracks] = all ? this.itemToEnd(item)
+                                            : this.itemIdx(item);
+                    this.client.upload.tracks(tracks,
+                        this._monitorProgress('upload'), Math.max(idx, 0),
+                        force, play);
+                }
+            },
+
+            itemIdx(item) {
+                var idx = this.playlist ? this.playlist.tracks.indexOf(item) : 0;
+                return [idx, [item]];
+            },
+            itemToEnd(item) {
+                if (item._playlist && this.playlist) {
+                    var idx = this.playlist.indexOf(item);
+                    return idx >= 0 ? [idx, this.playlist.tracks.slice(idx)]
+                                    : [0, [item]];
+                }
+                else return [0, [item]]
+            }    
         },
         components: typeof AppContextMenu == 'undefined' ? {} : {AppContextMenu}
     });
