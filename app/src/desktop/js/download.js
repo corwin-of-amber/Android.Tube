@@ -48,6 +48,7 @@ class AudioDownload {
 
     async _fetchMetadata() {
         var id = this._id();
+        this.metadata = {...this.metadata};
         if (id) {
             this.metadata['comment'] = JSON.stringify({youtube_id: id});
             if (this.metadata['description'] === true) {
@@ -69,8 +70,8 @@ class AudioDownload {
         return new Promise((resolve, reject) =>
             ffmpeg(infile).audioCodec('copy')
             .inputOptions(this._intervalFlags(this.interval))
-            .outputOption(this._metadataFlags(metadata))
-            .on('error', err => { console.error(`[download] ${id}`, err); reject(err); })
+            .outputOption(...this._metadataFlags(metadata)) /* splat needed because flags may contain spaces etc. (fluent-ffmpeg weirdness http://fluent-ffmpeg.github.io/index.html#output-options) */
+            .on('error', (err, stdout, stderr) => { console.error(`[download] ${id}`, err, stdout, stderr); reject(err); })
             .on('end', () => { console.log(`[download] ${id} converted.`); resolve(); })
             .saveToFile(outfile));
     }
@@ -121,6 +122,7 @@ class AudioDownload {
 
     _metadataFlags(metadata) {
         const mdflag = '-metadata';
+        /** @todo values must be escaped! (why..?) */
         return [].concat(...Object.entries(metadata)
                             .map(([k,v]) => [mdflag, `${k}=${v}`]));
     }
