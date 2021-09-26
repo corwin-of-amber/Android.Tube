@@ -215,15 +215,16 @@ $(function() {
             search(query) {
                 return this.$refs.search.search(query);
             },
-            watch(item) {
+            watch(item, opts) {
                 var self = this, operation;
                 this.status = 'pending';
                 this.curPlaying = YoutubeItem.id(item);
                 if (this.playlist && this.playlist.id && item._playlist === this.playlist.id && playerCore.watchFromList) {
-                    operation = playerCore.watchFromList(this.playlist.export(item));
+                    opts = Object.assign({onend: function() { self.playNext(); }}, opts || {});
+                    operation = playerCore.watchFromList(this.playlist.export(item), opts);
                 }
                 else {
-                    operation = playerCore.watch(item.uri || this.curPlaying);
+                    operation = playerCore.watch(item.uri || this.curPlaying, opts);
                 }
                 operation
                     .catch(function() { self.status = 'error'; })
@@ -234,7 +235,7 @@ $(function() {
                     var index = this.playlist.tracks.findIndex(t => 
                         YoutubeItem.id(t) === this.curPlaying);
                     if (index >= 0 && index < this.playlist.tracks.length - 1) {
-                        this.watch(this.playlist.tracks[index + 1]);
+                        this.watch(this.playlist.tracks[index + 1], {autoplay: true});
                     }
                 }
             },

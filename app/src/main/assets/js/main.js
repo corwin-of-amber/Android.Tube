@@ -47,16 +47,17 @@ class YtdlPlayerCore {
         this.preferredFormats = (preferredFormats || PREFERRED_FORMATS);
     }
 
-    watch(urlOrId) {
+    watch(urlOrId, opts) {
         var self = this;
         return this.getWatchUrl(urlOrId).then(
-            function(webm) { self.playStream(urlOrId, webm); })
+            function(webm) { self.playStream(urlOrId, webm, opts); })
             .catch(function(err) { console.error(err); });
     }
 
-    watchFromList(playlistData) {
+    watchFromList(playlistData, opts) {
         if (typeof mainActivity === 'undefined')
-            return this.watch(playlistData.tracks[playlistData.nowPlaying || 0].uri); // sorry
+            return this.watch(playlistData.tracks[playlistData.nowPlaying || 0].uri, // sorry
+                              opts);
         else {
             mainActivity.playFromList(JSON.stringify(playlistData));
             return Promise.resolve();
@@ -69,9 +70,9 @@ class YtdlPlayerCore {
         else return Promise.resolve({url: urlOrId, type: 'unknown'});
     }
 
-    playStream(urlOrId, webm) {
+    playStream(urlOrId, webm, opts) {
         if (typeof mainActivity === 'undefined')
-            playInPage(urlOrId, webm.url, webm.mimeType);
+            playInPage(urlOrId, webm.url, webm.mimeType, opts);
         else
             mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
     }
@@ -190,10 +191,11 @@ else {                                           /* In client browser */
 }
 
 
-function playInPage(track, mediaUrl, mediaType) {
-    var a = $('<audio>').attr('controls', true);
+function playInPage(track, mediaUrl, mediaType, opts) {
+    var a = $('<audio>').attr({controls: true, autoplay: opts && opts.autoplay});
     a.data('track', track);
     a.append($('<source>').attr('src', mediaUrl));
+    if (opts && opts.onend) a.on('ended', opts.onend);
     $('#video-area').html(a);
 }
 
