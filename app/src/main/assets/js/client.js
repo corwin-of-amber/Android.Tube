@@ -24,7 +24,7 @@ function server_action(cmd, path='/', responseType='text', method) {
         })
         .done(function(data) { verbose && console.log('ok', data); resolve(data); })
         .fail(function(jq, status, err) { console.error(jq, status, err);
-            reject(jq.responseJSON || jq.response);
+            reject(jq.responseJSON || jq.responseText);
          });
     });
 }
@@ -139,7 +139,7 @@ class ClientUploads {
                     await this.file(ufile, uploadProgress, `c${i}`));
             }
             if (play) {
-                this._play(track, start);
+                await this._play(track, start);
                 start = false; // next one will enqueue
             }
             i++;
@@ -150,8 +150,9 @@ class ClientUploads {
     _play(track, start) {
         let id = YoutubeItem.id(track),
             item = this.remoteTracks.get(id) || track;
-        start ? this.client.watch(item.uri || id)
-              : this.client.enqueue(item);
+        if (!item.uri) item = {...item, uri: id};
+        return start ? this.client.watch(item.uri)
+                     : this.client.enqueue(item);
     }
 
     _set(key, value) {

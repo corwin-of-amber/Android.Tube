@@ -86,6 +86,8 @@ public class HTTPD extends NanoWSD {
             return next();
         else if (path.equals("/prev"))
             return prev();
+        else if (path.equals("/playlist") && method == Method.GET)
+            return playlist();
         else if (path.equals("/playlists"))
             return playlistsIndex();
         else if (path.startsWith("/playlists/"))
@@ -387,10 +389,23 @@ public class HTTPD extends NanoWSD {
         }
     }
 
+    private Response playlist() {
+        Playlist playlist = context.player.getPlaylist();
+        try {
+            if (playlist == null)
+                return ok("{}");
+            else
+                return ok(playlist.exportJSON());
+        }
+        catch (JSONException e) {
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Internal error: " + e);
+        }
+    }
+
     private Response playlist(String playlistData, boolean enqueue) {
         try {
             Playlist playlist = Playlist.fromJSON(playlistData);
-            if (enqueue) context.player.enqueueTracks(playlist);
+            if (enqueue) context.player.enqueueTracks(playlist, false /* @todo */);
             else context.player.playFromList(playlist);
             // send to UI
             final String uiMsg = context.player.exportPlaylist();

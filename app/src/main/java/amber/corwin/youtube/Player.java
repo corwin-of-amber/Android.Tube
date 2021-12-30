@@ -83,6 +83,7 @@ public class Player {
 
         MediaPlayer player = new MediaPlayer();
         player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        playNextWhenDone(player);
 
         return player;
     }
@@ -121,12 +122,10 @@ public class Player {
     }
 
     public void playMedia(final Uri uri, Uri originalUri) {
-        this.error = null;
-        this.nowPlaying = null; /* track is set by playTrack if needed */
-        this.nowPlayingUri = (originalUri == null) ? uri : originalUri;
+        Uri setUri = (originalUri == null) ? uri : originalUri;
 
         if ("file".equals(uri.getScheme())) {
-            playFile(new File(context.getCacheDir(), uri.getPath()));
+            playFile(new File(context.getCacheDir(), uri.getPath()), setUri);
             return;
         }
 
@@ -141,7 +140,8 @@ public class Player {
         else {
             MediaPlayer player = setup();
             try {
-                player.setDataSource(this.context.getApplicationContext(), uri);
+                nowPlayingUri = setUri; /* track is set by playTrack if needed */
+                player.setDataSource(context.getApplicationContext(), uri);
                 engage(player, uri.toString());
             }
             catch (IOException e) {
@@ -150,9 +150,10 @@ public class Player {
         }
     }
 
-    void playFile(final File file) {
+    void playFile(final File file, Uri uri) {
         MediaPlayer player = setup();
         try {
+            nowPlayingUri = uri;
             player.setDataSource(file.toURI().toString());
             engage(player, file.getPath());
         }
@@ -181,13 +182,15 @@ public class Player {
         if (mediaPlayer != null) {
             if (track.gain != 0)
                 amplify(track.gain);
-            playNextWhenDone();
         }
     }
 
     int enqueueTrack(Playlist.Track track, boolean forPlay) {
         int index = enqueueTrack(track);
-        if (forPlay && !isPlaying()) { playlist.nowPlaying = index;  playTrack(track); }
+        if (forPlay && !isPlaying() && !isRequesting()) {
+            playlist.nowPlaying = index;
+            playTrack(track);
+        }
         return index;
     }
 
@@ -201,22 +204,22 @@ public class Player {
             }
         }
         playlist.tracks.add(track);
-        if (isPlaying()) playNextWhenDone();
         return playlist.tracks.size() - 1;
     }
 
-    public void enqueueTracks(Playlist playlist) {
+    public void enqueueTracks(Playlist playlist, boolean forPlay) {
         boolean first = true;
         for (Playlist.Track track : playlist.tracks) {
-            enqueueTrack(track, first);
+            enqueueTrack(track, forPlay && first);
             first = false;
         }
     }
 
-    private void playNextWhenDone() {
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+    private void playNextWhenDone(MediaPlayer player) {
+        player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mediaPlayer) {
+                /* only do it if `player` is the current MediaPlayer */
                 if (Player.this.mediaPlayer == mediaPlayer) {
                     playNext();
                 }
@@ -226,22 +229,22 @@ public class Player {
 
     void clearTrack() {
         /* Called when preparing to play non-playlist content */
-        this.nowPlaying = null;
+        nowPlaying = null;
     }
 
     private void playerError(String msg) {
-        this.error = new Error(msg, this.nowPlaying);
-        Toast.makeText(this.context, msg, Toast.LENGTH_LONG).show();
+        error = new Error(msg, nowPlaying);
+        Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
         cleanup();
     }
 
     public void playFromList(Playlist playlist) {
-        this.playlist = playlist;
+        playlist = playlist;
         playTrack(playlist.current());
     }
 
     public boolean playNext() {
-        if (this.playlist != null) {
+        if (playlist != null) {
             Playlist.Track track = playlist.next();
             if (track != null) {
                 playTrack(track);
@@ -253,7 +256,7 @@ public class Player {
     }
 
     public boolean playPrev() {
-        if (this.playlist != null) {
+        if (playlist != null) {
             Playlist.Track track = playlist.prev();
             if (track != null) {
                 playTrack(track);
@@ -270,6 +273,7 @@ public class Player {
     }
 
     public boolean isPlaying() { return mediaPlayer != null && mediaPlayer.isPlaying(); }
+    public boolean isRequesting() { return nowPlaying != null; }
 
     public void setVolume(int level, int max) {
         setVolume((float)level / max);
@@ -312,7 +316,11 @@ public class Player {
     public Uri getCurrentUri() { return nowPlayingUri; }
 
     public Playlist.Track getCurrentTrack() {
-        return nowPlaying; // (playlist == null) ? null : playlist.current();
+        return nowPlaying;
+    }
+
+    public Playlist getPlaylist() {
+        return playlist;
     }
 
     public Error getLastError() { return error; }
