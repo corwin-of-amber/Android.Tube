@@ -21,7 +21,8 @@ import org.json.JSONException;
 
 import java.io.File;
 import java.io.IOException;
-
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 public class Player {
@@ -44,6 +45,7 @@ public class Player {
     private boolean isPrepared;
     private LoudnessEnhancer loud;
     private Equalizer eqz;
+    private final Timer timer = new Timer();
 
     private UriHandler uriHandler = null;
 
@@ -98,10 +100,21 @@ public class Player {
         eqz = null;
 
         player.setVolume(volume, volume);
+        /* sync version */
+        /*
+        player.prepare();
+        try {
+            Thread.sleep(1000);
+        }
+        catch (InterruptedException e) { }
+        player.start();*/
+
+        /* async version */
         player.prepareAsync();
         player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer player) {
+                if (isPrepared) return;
                 isPrepared = true;
                 player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                     @Override
@@ -109,7 +122,12 @@ public class Player {
                         Log.e(TAG, "player error " + i + " " + i1); return false;
                     }
                 });
-                player.start();
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        player.start();
+                    }
+                }, 1000); /* it's a hack */
             }
         });
         player.setOnErrorListener(new MediaPlayer.OnErrorListener() {
