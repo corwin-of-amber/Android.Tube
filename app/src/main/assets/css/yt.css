@@ -166,6 +166,7 @@ input[type="range"]:focus {
 
 .video-snippet .duration {
     margin-left: .5em;
+    white-space: nowrap;
 }
 
 @keyframes pulse-animation {

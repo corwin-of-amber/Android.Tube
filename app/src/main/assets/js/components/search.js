@@ -42,10 +42,14 @@ Vue.component('video-snippet', {
             }
             else if (this.item.kind == 'youtube#searchResult') {
                 var self = this;
+                self.duration = -1;
+                /** @todo need to coalesce requests to avoid quota excess */
+                /*
                 yapi.details(this.item.id.videoId).then(function(res) {
                     self.duration = res.duration;
                 })
                 .catch(function(e) { console.error(e); self.duration = -1; })
+                */
             }
         },
         timestamp(pt) {

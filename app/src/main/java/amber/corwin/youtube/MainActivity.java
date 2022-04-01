@@ -3,6 +3,7 @@ package amber.corwin.youtube;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
@@ -23,12 +24,10 @@ import org.json.JSONException;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.CharBuffer;
@@ -36,7 +35,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import amber.corwin.youtube.server.HTTPD;
-
+import amber.corwin.youtube.server.ServerService;
 
 
 public class MainActivity extends Activity {
@@ -44,7 +43,7 @@ public class MainActivity extends Activity {
     private static final String TAG = "Android.Tube";
 
     private WebView webView;
-    public Player player;   // expose to HTTPD
+    public PlayerVLC player;   // expose to HTTPD
 
     private HTTPD httpd;
 
@@ -62,9 +61,9 @@ public class MainActivity extends Activity {
 
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 
-        player = new Player(this);
+        player = new PlayerVLC(this);
         //player.attach((VideoView) findViewById(R.id.video));
-        player.setUriHandler(new Player.UriHandler() {
+        player.setUriHandler(new PlayerVLC.UriHandler() {
             @Override
             public void resolveTrack(final Playlist.Track track, final Callback callback) {
                 requestStream(track.uri, new OnReceivedUrl() {
@@ -303,8 +302,9 @@ public class MainActivity extends Activity {
         try {
             httpd.start();
         }
-            catch (IOException e) {
+        catch (IOException e) {
             Log.e(TAG, "startServer", e);
         }
+        startService(new Intent(this, ServerService.class));
     }
 }

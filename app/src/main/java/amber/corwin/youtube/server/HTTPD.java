@@ -32,7 +32,7 @@ import java.util.Map;
 
 import amber.corwin.youtube.MainActivity;
 import amber.corwin.youtube.PlaybackPosition;
-import amber.corwin.youtube.Player;
+import amber.corwin.youtube.PlayerVLC;
 import amber.corwin.youtube.Playlist;
 import amber.corwin.youtube.VolumeSetting;
 import fi.iki.elonen.NanoWSD;
@@ -175,7 +175,7 @@ public class HTTPD extends NanoWSD {
             Playlist.Track track = context.player.getCurrentTrack();
             if (track != null)
                 o.put("track", track.id);
-            Player.Error error = context.player.getLastError();
+            PlayerVLC.Error error = context.player.getLastError();
             if (error != null) {
                 JSONObject e = new JSONObject();
                 e.put("msg", error.msg);
@@ -265,7 +265,7 @@ public class HTTPD extends NanoWSD {
 
     private Response amplify(IHTTPSession session) {
         String q = session.getQueryParameterString();
-        Player player = this.context.player;
+        PlayerVLC player = this.context.player;
         try {
             int millibels = Integer.parseInt(q);
             if (player != null)
@@ -405,7 +405,7 @@ public class HTTPD extends NanoWSD {
     private Response playlist(String playlistData, boolean enqueue) {
         try {
             Playlist playlist = Playlist.fromJSON(playlistData);
-            if (enqueue) context.player.enqueueTracks(playlist, false /* @todo */);
+            if (enqueue) context.player.enqueueTracks(playlist, !context.player.isPlaying() /* @todo */);
             else context.player.playFromList(playlist);
             // send to UI
             final String uiMsg = context.player.exportPlaylist();

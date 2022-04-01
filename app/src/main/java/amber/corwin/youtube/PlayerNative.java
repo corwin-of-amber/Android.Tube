@@ -9,7 +9,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.PowerManager;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -25,7 +24,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
-public class Player {
+public class PlayerNative {
 
     static final String TAG = "Player";
 
@@ -51,7 +50,7 @@ public class Player {
 
     private Error error = null;
 
-    Player(Activity context) {
+    PlayerNative(Activity context) {
         this.context = context;
     }
 
@@ -60,6 +59,7 @@ public class Player {
     }
 
     void attach(VideoView video) {
+        /* @todo video is deprecated right now */
         this.video = video;
         mediaController = new MediaController(context);
         mediaController.setAnchorView(video);
@@ -238,7 +238,7 @@ public class Player {
             @Override
             public void onCompletion(MediaPlayer mediaPlayer) {
                 /* only do it if `player` is the current MediaPlayer */
-                if (Player.this.mediaPlayer == mediaPlayer) {
+                if (PlayerNative.this.mediaPlayer == mediaPlayer) {
                     playNext();
                 }
             }
@@ -257,7 +257,7 @@ public class Player {
     }
 
     public void playFromList(Playlist playlist) {
-        playlist = playlist;
+        this.playlist = playlist;
         playTrack(playlist.current());
     }
 
