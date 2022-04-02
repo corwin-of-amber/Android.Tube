@@ -389,7 +389,7 @@ $(function() {
                 else return [0, [item]]
             }    
         },
-        components: typeof AppContextMenu == 'undefined' ? {} : {AppContextMenu}
+        components: {AppContextMenu, VolumeControl}
     });
 });
 

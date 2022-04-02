@@ -1,28 +1,5 @@
 'use strict';
 
-Vue.component('volume-control', {
-    data: function() { return {level: 500, max: 1000}; },
-    template: `
-        <input type="range" class="volume-control"
-            v-model.number="level" min="0" :max="max" @wheel="wheel">
-    `,
-    mounted() {
-        var self = this;
-        this.$watch('level', function(level) {
-            controls.setVolume(level, self.max);
-        });
-        controls.getVolume(function(vol) {
-            self.level = vol.level * self.max / vol.max;
-        });
-    },
-    methods: {
-        wheel(ev) {
-            this.level = Math.max(0, Math.min(this.max, this.level + ev.deltaY));
-        }
-    }
-});
-
-
 Vue.component('position-bar', {
     data: function() { return {pos: 0, duration: 20}; },
     template: `
