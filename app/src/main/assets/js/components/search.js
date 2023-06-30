@@ -268,7 +268,8 @@ $(function() {
             },
 
             upload(file, name) {
-                var hasFS = (typeof process !== 'undefined');   // NWjs
+                var hasFS = (typeof process !== 'undefined' &&
+                             !!(process.versions && process.versions.nw));   // NWjs
                 if (file.type == 'application/json') {
                     this.$refs.playlist.openPlaylist(file);
                 }

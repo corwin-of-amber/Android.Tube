@@ -23,7 +23,7 @@
         "vue": "^2.6.11",
         "vue-context-menu": "^2.0.6",
         "ws": "^7.3.0",
-        "ytdl-core": "^4.11.0"
+        "ytdl-core": "^4.11.1"
     },
     "devDependencies": {
         "@babel/cli": "^7.10.1",
