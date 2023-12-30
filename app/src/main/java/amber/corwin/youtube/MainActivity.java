@@ -48,6 +48,7 @@ public class MainActivity extends Activity {
     private HTTPD httpd;
 
     private PowerManager.WakeLock wakeLock;
+    private WifiControl wifi;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -127,6 +128,19 @@ public class MainActivity extends Activity {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 TAG + "::CPUWakeLock");
         wakeLock.acquire();
+
+        wifi = new WifiControl(this);
+
+        /*
+        webView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                if (wifi.isConnected()) wifi.disconnect();
+                else wifi.connect();
+                return false;
+            }
+        });*/
+        wifi.watchdog();
     }
 
     @Override
