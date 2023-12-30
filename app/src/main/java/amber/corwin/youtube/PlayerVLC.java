@@ -30,6 +30,7 @@ public class PlayerVLC {
 
     private Activity context;
 
+    private LibVLC vlc = null;
     private MediaPlayer mediaPlayer;
     private MediaController mediaController;
     private VideoView video;
@@ -61,7 +62,8 @@ public class PlayerVLC {
         Log.d(TAG, "player setup");
         cleanup();
 
-        MediaPlayer player = new MediaPlayer(new LibVLC(context));
+        if (vlc == null) vlc = new LibVLC(context);
+        MediaPlayer player = new MediaPlayer(vlc);
         playNextWhenDone(player);
 
         return player;
@@ -99,7 +101,9 @@ public class PlayerVLC {
             MediaPlayer player = setup();
             try {
                 nowPlayingUri = setUri; /* track is set by playTrack if needed */
-                player.setMedia(new Media(player.getLibVLC(), uri));
+                Media media = new Media(player.getLibVLC(), uri);
+                media.addOption(":network-caching=1500");
+                player.setMedia(media);
                 engage(player, uri.toString());
             }
             catch (IOException e) {
@@ -183,6 +187,10 @@ public class PlayerVLC {
                         if (PlayerVLC.this.mediaPlayer == player) {
                             playNext();
                         }
+                        break;
+                    case MediaPlayer.Event.EncounteredError:
+                        String err = event.getRecordPath(); // is this the error message?
+                        Log.e(TAG, "VLC player error: " + (err == null ? "(null)" : err), null);
                         break;
                 }
             }
