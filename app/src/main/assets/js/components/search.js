@@ -188,6 +188,7 @@ $(function() {
                     <span v-if="ongoing.upload.progress && ongoing.upload.progress.total">{{(100 * ongoing.upload.progress.uploaded / ongoing.upload.progress.total).toFixed(1)}}%</span>
                 </span>
                 <span v-if="ongoing.download" class="download-progress">{{ongoing.download.filename}}
+                    <span v-if="ongoing.download.progress && ongoing.download.progress.total">{{(100 * ongoing.download.progress.loaded / ongoing.download.progress.total).toFixed(1)}}%</span>
                 </span>
                 <span style="position: absolute" v-if="hasContextMenu">
                     <app-context-menu ref="menu" @action="menuAction"/>

@@ -27,7 +27,7 @@ class AudioDownload {
             var tmpfile = this._mktemp(`${this._id()}.dl.tmp`);
             try {
                 await Promise.all([
-                    this._fetch(tmpfile),
+                    this._fetch(tmpfile, progress),
                     this._fetchMetadata()
                 ]);
                 outfile = this._mktemp(outfile);
@@ -41,8 +41,8 @@ class AudioDownload {
         return outfile;
     }
 
-    async _fetch(outfile) {
-        var abuf = await (await fetch(this.url)).arrayBuffer();
+    async _fetch(outfile, progress = () => {}) {
+        var abuf = await fetchWithProgress(this.url, progress);
         fs.writeFileSync(outfile, new Uint8Array(abuf));
     }
 
@@ -147,6 +147,18 @@ class AudioDownload {
     static PREFERRED_FORMATS = PREFERRED_FORMATS;
 }
 
+// Here comes some boilerplate
+function fetchWithProgress(url, progress) {
+    return new Promise((resolve, reject) => {
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onprogress = (evt) => progress(evt);
+        xhr.onerror = () => reject(new Error("download failed"));
+        xhr.open('GET', url);
+        xhr.send();
+    });
+}
 
 class DownloadReport {
     constructor() {
