@@ -1,17 +1,12 @@
 'use strict';
 
-
-/*
+/* required format of yapi-keys.js:
 const api_key = 'AIzaSyCXd3M-Cb0KvyBMKTNS23nfaoiez6l51Go',
       api_origin = 'https://developers.google.com';
-
-const api_key = 'AIzaSyAa8yy0GdcGPHdtD083HiGGx_S0vMPScDM',
-      api_origin = 'https://explorer.apis.google.com';
 */
-const api_key = 'AIzaSyCcPH7jiPoZ0zub39kkdaufXD2yNyz5r24',
-      api_origin = 'corwin.amber';
 
 const api_endpoint = 'https://content.googleapis.com/youtube/v3';
+
 
 class YouTubeSearch {
 

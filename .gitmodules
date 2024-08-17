@@ -1,0 +1,3 @@
+[submodule "packages/distubejs-ytdl-core"]
+	path = packages/distubejs-ytdl-core
+	url = git@github.com:corwin-of-amber/ytdl-core.git

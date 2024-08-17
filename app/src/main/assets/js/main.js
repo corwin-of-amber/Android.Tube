@@ -40,7 +40,24 @@ if (!Object.assign) {
 if (!Object.values) {
     Object.values = function(o) { return Object.keys(o).map(function(k) { return o[k]; })};
 }
-
+if (!Promise.allSettled) {
+    Promise.allSettled = async function(promises) {
+        let r = [];
+        for (let p of promises) {
+            try       { r.push({status: 'fulfilled', value: await p}); }
+            catch (e) { r.push({status: 'rejected', reason: e}); }
+        }
+        return r;
+    }
+}
+if (!RegExp.prototype.dotAll) {
+    /* very-poor-man's 's' flag polyfill (specifically for `@distube/ytdl-core`) */
+    let _RegExp = RegExp;
+    window.RegExp = function(re, flags) {
+        if (flags === 's') return new _RegExp(re.replace('.*', '[^]*'));
+        else return new _RegExp(re, flags);
+    }
+}
 
 class YtdlPlayerCore {
     constructor(preferredFormats) {
@@ -89,7 +106,7 @@ class YtdlPlayerCore {
             var n = info.formats.length, i = 0, webm, rank;
             for (let format of info.formats) {
                 let ftype = format.mimeType;
-                console.log(`format #${++i}/${n}: ${ftype}\n` +
+                console.log(`format #${++i}/${n}: ${format.itag} ${ftype}\n` +
                     `        '${format.url}'`);
                 if (!format.url) {
                     console.warn(`        missing url (${JSON.stringify(format)})`);

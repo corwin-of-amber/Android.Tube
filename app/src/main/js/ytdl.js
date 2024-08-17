@@ -1,2 +1,2 @@
-window.ytdl = require('ytdl-core');
+window.ytdl = require('@distube/ytdl-core');
 
