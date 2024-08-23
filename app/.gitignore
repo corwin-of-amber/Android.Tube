@@ -1,3 +1,4 @@
 /build
 *.browser.js
 /src/main/assets/js/lib
+yapi-keys.js

@@ -182,6 +182,10 @@ class YoutubeItem {
 
 
 class YtdlPlayerInPageCore extends YtdlPlayerCore {
+    playStream(urlOrId, webm, opts) {
+        playInPage(urlOrId, webm.url, webm.mimeType, opts);
+    }
+
     enqueue(tracks) {
         if (!Array.isArray(tracks)) tracks = [tracks];
         tracks.forEach(function(track) {
@@ -191,7 +195,7 @@ class YtdlPlayerInPageCore extends YtdlPlayerCore {
 }
 
 
-var playerCore, yapi;
+var playerCore, yapi, server;
 
 if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
     playerCore = new YtdlPlayerCore();
@@ -201,11 +205,14 @@ else if (location.protocol === 'chrome-extension:' && /* In NWjs standalone app 
         !(location.search && location.search.length)) {
     playerCore = new YtdlPlayerInPageCore([/^audio[/]webm; codecs="opus"/]);
     yapi = new YouTubeSearch();
+    server = new Server();
 }
 else {                                           /* In client browser */
     playerCore = new ClientPlayerCore();
     yapi = new ClientYouTubeSearch();
 }
+
+SEARCH_SCOPES['yapi'] = SEARCH_SCOPES['default'] = yapi;
 
 
 function playInPage(track, mediaUrl, mediaType, opts) {
@@ -217,10 +224,10 @@ function playInPage(track, mediaUrl, mediaType, opts) {
 }
 
 
-function action(cmd) {
+function action(cmd, opts) {
     switch (cmd.type) {
-    case 'watch':    return playerCore.watch(cmd.url);
-    case 'search':   return app.search(cmd.text);
+    case 'watch':    return playerCore.watch(cmd.url, opts);
+    case 'search':   return app.search(cmd.text, opts);
     case 'details':  return yapi.details(cmd.videoId);
     case 'playlist': app.openPlaylist(cmd.data); return Promise.resolve();
     case 'request':

@@ -299,8 +299,10 @@ class Playlist {
     }
 
     static trackFromFile(file) {
+        if (typeof file === 'string')
+            file = {name: file.match(/[^/]*$/)[0] || '???', path: file};
         // @todo use URL.createObjectURL for blobs with no file:// access
-        return {kind: Playlist.KIND.LOCAL, 
+        return {id: sillyHash(file.path), kind: Playlist.KIND.LOCAL, 
             snippet: {title: file.name}, uri: 'file://' + file.path};
     }
 
@@ -350,3 +352,10 @@ class Playlist {
 
 Playlist.KIND = {DIRECT: 1, YOUTUBE: 2, LOCAL: 3};
 Playlist.DEFAULT_STORAGE_KEY = 'tube.playlist';
+
+
+function sillyHash(string) {
+    return string.split('').reduce((hash, char) => {
+        return char.charCodeAt(0) + (hash << 6) + (hash << 16) - hash;
+    }, 0).toString(36);
+}

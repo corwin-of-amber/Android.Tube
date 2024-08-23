@@ -7,6 +7,8 @@ const fs = require('fs'), http = require('http'), concat = require('concat-strea
  * A JS clone of the server from MainActivity (for testing).
  */
 class Server {
+    actionOpts = {scope: 'local', autoplay: true}
+
     constructor(port=2224) {
         this.port = port;
 
@@ -15,11 +17,13 @@ class Server {
 
         this.server.on('request', (request, response) => this.handle(request, response));
 
+        this.controls = new InPagePlayerControls();
+
         window.addEventListener('unload', () => this.server.close());
     }
 
     handle(request, response) {
-        console.log(request);
+        console.log('%c[server] %s %s', 'color:blue', request.method, request.url);
         var serveStatic = (filename) => {
             console.log(filename);
             fs.createReadStream(filename).on('error', console.error)
@@ -37,13 +41,16 @@ class Server {
                 ['/js/', '/css/'].some(p => request.url.startsWith(p))) {
                 serveStatic('app/src/main/assets' + request.url);
             }
-            else if (path === '/resume') { controls.resume(); response.end(); }
-            else if (path === '/pause')  { controls.pause(); response.end(); }
+            else if (path === '/status') { this.controls.getStatus(function (s) { response.write(JSON.stringify(s)); response.end(); }); }
+            else if (path === '/resume') { this.controls.resume(); response.end(); }
+            else if (path === '/pause')  { this.controls.pause(); response.end(); }
+            else if (path === '/pos')    { this.controls.seek(+q); response.end(); }
             else if (path === '/vol')    { response.end(); }
             else if (request.method === 'POST') {
                 request.pipe(concat(async (msg) => {
-                    console.log(msg);
-                    var c = await action(JSON.parse(msg));
+                    let json = JSON.parse(msg);
+                    console.log('%c[server] %o', 'color: blue', json);
+                    var c = await action(json, this.actionOpts);
                     response.write(c ? JSON.stringify(c) : "ok");
                     response.end();
                 }));

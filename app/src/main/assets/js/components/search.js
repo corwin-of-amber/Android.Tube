@@ -10,6 +10,8 @@ if (!String.prototype.padStart)
                                 }
 
 
+const SEARCH_SCOPES = {};
+
 Vue.component('search-button', {
     template: `
     <button @click="$emit('click')">
@@ -112,7 +114,7 @@ Vue.component('search-ui', {
             </div>
             <div id="search-results" class="list">
                 <template v-for="item in searchResults">
-                    <video-snippet v-if="itemKind(item) === 'youtube#video'"
+                    <video-snippet v-if="isVisible(item)"
                         :item="item" :spotlight="spotlightOf(itemId(item))"
                         @click="$emit('selected', item)"
                         @swipe="$emit('swipe', item)"/>
@@ -124,20 +126,30 @@ Vue.component('search-ui', {
         this.performSearch = _.debounce(this._performSearch, 500);
     },
     methods: {
-        search(query) {
+        search(query, opts) {
             this.searchQuery = query;
-            return this._performSearch(query);  // invoke search immediately
+            try {
+                return this._performSearch(query, opts);  // invoke search immediately
+            }
+            finally {
+                // This is to prevent the change of `searchQuery` to fire another
+                // `performSearch`...  @oops
+                setTimeout(() => this.performSearch.cancel(), 0);
+            }
         },
-        _performSearch(query) {
-            if (this._lastSearch === query) return this._lastResult; // perf
-            else this._lastSearch = query;
+        _performSearch(query, opts) {
+            let k = JSON.stringify([query, opts || {}]);
+            if (this._lastSearch === k) return this._lastResult; // perf
+            else this._lastSearch = k;
 
             var self = this;
-            return this._lastResult = yapi.search(query).then(function(res) {
+            var use = SEARCH_SCOPES[opts && opts.scope] || yapi;
+            return this._lastResult = use.search(query).then(function(res) {
                 self.searchResults = res.items;
                 return res;
             });
         },
+        isVisible(item) { return ['youtube#video', Playlist.KIND.LOCAL].includes(this.itemKind(item)); },
         itemId(item) { return YoutubeItem.id(item); },
         itemKind(item) { return YoutubeItem.kind(item); },
         blur() {
@@ -217,8 +229,8 @@ $(function() {
             spotlight() { return {active: this.curPlaying, focused: this.focused}; }
         },
         methods: {
-            search(query) {
-                return this.$refs.search.search(query);
+            search(query, opts) {
+                return this.$refs.search.search(query, opts);
             },
             watch(item, opts) {
                 var self = this, operation;
