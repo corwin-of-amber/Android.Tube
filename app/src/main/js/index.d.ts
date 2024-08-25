@@ -3,6 +3,7 @@ declare var playerCore: any;
 declare class YoutubeItem {
     static id(item: Playlist.Item): string
     static title(item: Playlist.Item): string
+    static kind(item: Playlist.Item): string
     static mediaUriOrId(item: Playlist.Item): string
 }
 

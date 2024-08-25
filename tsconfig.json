@@ -1,11 +1,12 @@
 {
     "compilerOptions": {
         "target": "es2019",
+        "module": "esnext",
+        "lib": ["esnext", "dom", "dom.iterable"],
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
         "downlevelIteration": true,
         "experimentalDecorators": true
-    },
-    "include": ["app/src"]
+    }
 }

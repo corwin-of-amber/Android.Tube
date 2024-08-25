@@ -1,7 +1,7 @@
 {
     "name": "android-tube",
     "version": "1.0.0",
-    "main": "index.html",
+    "main": "build/kremlin/index.html",
     "webview": {
         "partitions": [
             {
@@ -20,9 +20,9 @@
         "fluent-ffmpeg": "^2.1.2",
         "jquery": "^3.5.1",
         "lodash": "^4.17.19",
+        "loudness": "^0.4.2",
         "mkdirp": "^1.0.4",
-        "vue": "^2.6.11",
-        "vue-context-menu": "^2.0.6",
+        "vue": "^3.4.38",
         "ws": "^7.3.0"
     },
     "devDependencies": {

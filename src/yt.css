@@ -1,0 +1,318 @@
+video {
+    width: 20%;
+    display: block;
+}
+
+video:focus {
+    outline: none;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overscroll-behavior: none;
+}
+
+#ui-container {
+    box-sizing: border-box;
+    height: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+    display: flex;
+}
+
+#ui-container > input.volume-control {
+    position: fixed;
+    top: calc(25vh + 50px);
+    right: calc(13px - 25vh);
+    width: 50vh;
+    height: 30px;
+}
+
+#ui-container > div.search-ui,
+#ui-container > div.playlist-ui,
+#ui-container > div.playlist-ui-index {
+    flex: 1 1 1%;
+}
+
+#ui-container > div:last-of-type > .list {
+    padding-right: 24px;
+}
+
+div.search-ui, div.playlist-ui, div.playlist-ui-index {
+    padding: 9px;
+    height: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+    direction: rtl;  /* force scrollbar on the left */
+}
+
+div.search-ui > *, div.playlist-ui > *, div.playlist-ui-index > * {
+    direction: ltr;
+}
+
+input[type="range"]:focus {
+    outline: none;
+}
+
+#search-box {
+    margin-top: 9px;
+    display: flex;
+    border: 1px solid #ccc;
+    padding: 0 2px;
+}
+
+#search-box input {
+    border: none;
+    width: 1px;
+    flex-grow: 1;
+    font-size: 16px;
+    vertical-align: middle;
+    height: 28px;
+}
+
+#search-box button {
+    width: 24px;
+    flex-grow: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    vertical-align: middle;
+}
+
+#search-box button path {
+    fill: #ccc;
+}
+
+#search-box button:active {
+    background: #ccc;
+}
+
+#search-box *:focus {
+    outline: none;
+}
+
+#ui-container {
+    font-family: sans-serif;
+    font-size: 14px;
+    line-height: 17px;
+}
+
+.search-ui.ui-rightmost > #search-results,
+.playlist-ui.ui-rightmost > div.playlist-body,
+.playlist-ui-index.ui-rightmost > ul {
+    margin-right: 30px;  /* room for volume control */
+}
+
+.video-snippet {
+    display: flex;
+    cursor: pointer;
+    margin: 0;
+    padding: 9px 2px;
+}
+
+.video-snippet.active,
+.playlist-entry.active {
+    background: #4747ff;
+    color: white;
+}
+
+.video-snippet.focused {
+    background: #f3f3f3;
+}
+
+.video-snippet.active.focused {
+    background: #6d6dff;
+}
+
+.pending .video-snippet.active {
+    animation: pulse-animation 1s steps(20, start) infinite;
+}
+
+.error .video-snippet.active {
+    background: #a53535;
+}
+
+.video-snippet .title {
+    flex-grow: 1;
+}
+
+.video-snippet .duration {
+    margin-left: .5em;
+    white-space: nowrap;
+}
+
+@keyframes pulse-animation {
+  50% {
+    background: #8484ff;
+  }
+}
+
+.control-panel {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    background: white;
+    border-left: 1px solid rgb(204, 191, 191);
+    border-top: 1px solid #ccc;    
+    padding: 2px 0 0 9px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.control-panel .controls {
+    padding: 5px;
+}
+
+.control-panel:not(.expand) {
+    padding: 0;
+    border: none;
+}
+
+.control-panel:not(.expand) .controls {
+    display: none;
+}
+
+.control-panel > button {
+    border: none;
+    background: #eee;
+    padding: 0 7px 2px 5px;
+    font-size: 20px;
+}
+
+.control-panel.expand > button {
+    color: #eee;
+    background: #888;
+}
+
+button:active, button:focus {
+    outline: none;
+}
+
+button[name="play-pause"] {
+    border: none;
+    background: none;
+    font-size: 20px;
+    letter-spacing: 2px;
+    padding: 0;
+    min-width: 20px;    
+}
+
+.playlist-ui,
+.playlist-ui-index {
+    /* @todo only on narrow screen and only when search ui is visible */
+    padding-left: 0;
+}
+
+.playlist-ui h1,
+.playlist-ui-index h1 {
+    font-size: 16px;
+    color: #888;
+    padding-bottom: 1px;
+    margin-top: 16px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid grey;
+}
+
+.playlist-ui h1:focus {
+    padding: 3px 1px 2px 1px;
+    border: none;
+    outline: 1px solid grey;
+    margin-top: 13px;
+}
+
+.playlist-ui > .toolbox {
+    float: right;
+}
+
+.playlist-ui .playlist-item {
+    display: flex;
+}
+
+.playlist-ui .playlist-item .gutter {
+    flex: 0 0 10px;
+    background: #eee;
+}
+
+.playlist-ui .playlist-item .video-snippet {
+    flex-grow: 1;
+}
+
+.playlist-ui.drag-over {
+    background: #f4f4ff;
+}
+
+.playlist-ui.drag-over h1 {
+    background: white;
+    margin-top: 0;
+    padding-top: 16px;
+}
+
+.playlist-ui .playlist-item.drag-above {
+    box-shadow: inset 0px  1px 0px 0px blue,
+                      0px -1px 0px 0px blue;
+}
+
+.playlist-ui .playlist-item.drag-below {
+    box-shadow: inset 0px -1px 0px 0px blue,
+                      0px  1px 0px 0px blue;
+}
+
+.playlist-ui .playlist-item.uploaded .gutter {
+    background-color: #b9b9e6;
+}
+
+.toolbox button {
+    border: none;
+    font-size: 20px;
+    color: silver;
+}
+
+.toolbox button:hover {
+    color: #777;
+}
+
+.toolbox button:active {
+    background: #eee;
+}
+
+.playlist-ui-index ul {
+    padding: 0;
+}
+
+.playlist-ui-index ul li {
+    list-style: none;
+    font-size: 15px;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.playlist-ui-index ul li:not(.active):hover {
+    background: #eef;
+}
+
+.upload-progress,
+.download-progress {
+    position: absolute;
+    bottom: 15px;
+    left: 5px;
+    background: #fffffff8;
+}
+
+div#video-area {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    /* @todo only in audio mode */
+    backdrop-filter: blur(2px);
+    background-color: #fffc;
+    border-radius: 99px;
+}
+
+div#video-area audio {
+    opacity: 0.5;  /* this is better when playing audio, and only the controls are shown */
+    outline: none;
+}

@@ -4,13 +4,16 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <script>if (typeof module === 'object') { module = undefined; /* Electron */ }</script>
-        
+
+        <script src="src/index.ts"></script>
+
+        <!--
         <script src="node_modules/jquery/dist/jquery.js"></script>
         <script src="node_modules/lodash/lodash.js"></script>
 
         <script src="build/kremlin/ui.js"></script>
 
-        <!-- <script src="node_modules/vue/dist/vue.js"></script> -->
+        <!-- <script src="node_modules/vue/dist/vue.js"></script> - ->
         <script src="app/src/main/assets/js/lib/ytdl.browser.js"></script>
         <script src="app/src/main/assets/js/yapi.js"></script>
         <script src="app/src/main/assets/js/yapi-keys.js"></script>
@@ -24,7 +27,7 @@
         <script src="app/src/desktop/js/download.js"></script>
         <script src="app/src/desktop/js/search.js"></script>
 
-        <link rel="stylesheet" type="text/css" href="app/src/main/assets/css/yt.css">
+        <link rel="stylesheet" type="text/css" href="app/src/main/assets/css/yt.css"> -->
     </head>
     <body>
         <div id="video-area"></div>
@@ -33,8 +36,11 @@
     </body>
 
     <script>SERVER = 'http://10.0.0.11:2224';</script>
+    <!--
     <script>$(() => {
         //app.$refs.search.search("bangles");
         app.$set(app.playlist, 'show', true);
-       });</script>
+       });</script> -->
+
+    <!-- @kremlin.plug -->
 </html>
