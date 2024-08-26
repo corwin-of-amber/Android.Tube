@@ -49,7 +49,7 @@ export default {
             else this._lastSearch = k;
 
             var self = this;
-            var use = SEARCH_SCOPES[opts && opts.scope] || yapi;
+            var use = SEARCH_SCOPES[opts && opts.scope] || SEARCH_SCOPES['default'];
             return this._lastResult = use.search(query).then(function(res) {
                 self.searchResults = res.items;
                 return res;

@@ -20,3 +20,5 @@
 .*.swp
 gradlew
 gradlew.bat
+yapi-keys.js
+_npmlink
