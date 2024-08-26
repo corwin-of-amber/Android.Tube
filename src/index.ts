@@ -7,20 +7,21 @@ import App from './components/app.vue';
 import './yt.css';
 
 import { YouTubeSearch } from './search/yapi';
+import { MDFindSearch } from './search/local-files';
 import { YtdlPlayerInPageCore } from './player';
 
 
-Object.assign(window, {Playlist, ytdl, __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false});
+Object.assign(window, {Playlist, ytdl});
 
 
 async function main() {
-    let app = Vue.createApp(App, {data: Playlist.restore()}).mount(document.querySelector('#ui-container'));
+    let app = Vue.createApp(App, {data: Playlist.restore()}).mount('#app');
 
-    let player = new YtdlPlayerInPageCore,
+    let playerCore = new YtdlPlayerInPageCore,
         yapi = new YouTubeSearch,
-        SEARCH_SCOPES = {yapi, default: yapi};
+        SEARCH_SCOPES = {yapi, local: new MDFindSearch, default: yapi};
 
-    Object.assign(window, {app, player, yapi, SEARCH_SCOPES});
+    Object.assign(window, {app, playerCore, yapi, SEARCH_SCOPES});
 }
 
 document.addEventListener('DOMContentLoaded', main);

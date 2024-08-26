@@ -5,6 +5,7 @@
 
         <script>if (typeof module === 'object') { module = undefined; /* Electron */ }</script>
 
+        <script>window.__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false;</script>
         <script src="src/index.ts"></script>
 
         <!--
@@ -30,17 +31,11 @@
         <link rel="stylesheet" type="text/css" href="app/src/main/assets/css/yt.css"> -->
     </head>
     <body>
+        <div id="app" class="height: 100%"></div>
         <div id="video-area"></div>
-        <div id="ui-container">
-        </div>
     </body>
 
     <script>SERVER = 'http://10.0.0.11:2224';</script>
-    <!--
-    <script>$(() => {
-        //app.$refs.search.search("bangles");
-        app.$set(app.playlist, 'show', true);
-       });</script> -->
 
     <!-- @kremlin.plug -->
 </html>
