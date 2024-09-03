@@ -1,6 +1,6 @@
 <template>
     <input type="range" class="volume-control"
-        v-model.number="level" min="0" :max="max" @wheel="wheel">  
+        v-model.number="modelValue.level" min="0" :max="modelValue.max" @wheel="wheel">  
 </template>
 
 <style>
@@ -30,24 +30,18 @@ input.volume-control::-webkit-slider-thumb {
 }
 </style>
 
-<script>
-export default {
-    data: function() { return {level: 500, max: 1000}; },
-    mounted() {
-        var self = this;
-        this.$watch('level', function(level) {
-            //controls.setVolume(level, self.max);
-        });
-        /*
-        controls.getVolume(function(vol) {
-            self.level = vol.level * self.max / vol.max;
-        });
-        */
-    },
-    methods: {
-        wheel(ev) {
-            this.level = Math.max(0, Math.min(this.max, this.level + ev.deltaY));
-        }
+<script lang="ts">
+import { Vue, Component, Prop, toNative } from 'vue-facing-decorator';
+
+@Component
+class IVolumeSlider extends Vue {
+    @Prop modelValue: {level: number, max: number}
+    
+    wheel(ev) {
+        let m = this.modelValue;
+        m.level = Math.max(0, Math.min(m.max, m.level + ev.deltaY));
     }
 }
+
+export default toNative(IVolumeSlider)
 </script>

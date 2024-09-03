@@ -2,7 +2,7 @@
     <p class="video-snippet" :class="spotlight || {}" @click="$emit('click')"
             draggable="true" @dragstart="dragStart" @contextmenu.prevent="menu">
         <span class="title" v-html="item.snippet.title"/>
-        <span class="duration" v-if="duration">{{timestamp(duration)}}</span>
+        <span class="duration" v-if="item.duration !== undefined">{{timestamp(item.duration)}}</span>
     </p>
 </template>
 
@@ -23,7 +23,6 @@ export default {
             }
             else if (this.item.kind == 'youtube#searchResult') {
                 var self = this;
-                self.duration = -1;
                 /** @todo need to coalesce requests to avoid quota excess */
                 /*
                 yapi.details(this.item.id.videoId).then(function(res) {
@@ -33,7 +32,11 @@ export default {
                 */
             }
         },
-        timestamp(pt) {
+        timestamp(hms) {
+            return hms ? hms.filter(function(x) { return x; })
+                            .map(function(x) {return x.toString().padStart(2, '0'); }).join(':')
+                       : "--:--";
+            /*
             if (pt === -1) return "--:--";
 
             var mo = pt.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -44,6 +47,7 @@ export default {
                     .map(function(x) {return x.padStart(2, '0'); }).join(':');
             }
             else return "--:--";
+            */
         },
         dragStart(ev) {
             ev.dataTransfer.setData("json", JSON.stringify(this.item));

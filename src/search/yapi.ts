@@ -6,6 +6,7 @@ const api_key = 'AIzaSyCXd3M-Cb0KvyBMKTNS23nfaoiez6l51Go',
 
 import $ from 'jquery';
 import { api_key, api_origin } from './yapi-keys';
+import { Track } from '../model';
 
 const api_endpoint = 'https://content.googleapis.com/youtube/v3';
 
@@ -15,7 +16,7 @@ class YouTubeSearch {
     details = memoize1(this._details)
     snippet = memoize1(this._snippet);
 
-    yapi(action, params) {
+    yapi(action, params): Promise<any> {
         var url=`${api_endpoint}/${action}?${$.param(params)}&key=${api_key}`;
         return new Promise(function(resolve, reject) {
             $.getJSON({url: url, headers: {'X-Origin': api_origin}})
@@ -25,9 +26,11 @@ class YouTubeSearch {
     }
 
     search(query) {
-        var id = this.asVideoId(query);
-        return id ? this.yapi('videos', {id, part: 'snippet,contentDetails'})
-                  : this.yapi('search', {maxResults: 50, part: 'snippet', q: query});
+        var id = this.asVideoId(query),
+            resp = id ? this.yapi('videos', {id, part: 'snippet,contentDetails'})
+                      : this.yapi('search', {maxResults: 50, part: 'snippet', q: query});
+
+        return resp.then(({items}) => ({items: this.postprocessItems(items as any[])}));
     }
 
     page(pageToken) {
@@ -62,6 +65,11 @@ class YouTubeSearch {
             try { return ytdl.getURLVideoID(query); }
             catch (e) { return undefined; }
         }
+    }
+
+    postprocessItems(items: any[]): Track[] {
+        return items.flatMap(item =>
+            item.id.kind === 'youtube#video' ? Track.fromYoutubeSearchResult(item) : []);
     }
 
     _details(videoId) {

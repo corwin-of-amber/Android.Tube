@@ -1,13 +1,13 @@
 <template>
     <div class="search-ui">
         <div id="search-box">
-            <input ref="query" v-model="searchQuery" @keydown.enter="blur()">
+            <input ref="query" v-model="state.query" @keydown.enter="blur()">
             <search-button @click="selectAll"/>
         </div>
         <div id="search-results" class="list">
-            <template v-for="item in searchResults">
-                <track-snippet v-if="isVisible(item)"
-                    :item="item" :spotlight="spotlightOf(itemId(item))"
+            <template v-for="item in state.results">
+                <track-snippet
+                    :item="item" :spotlight="spotlightOf(item.id)"
                     @click="$emit('selected', item)"
                     @swipe="$emit('swipe', item)"/>
             </template>
@@ -23,17 +23,13 @@ import SearchButton from './search-button.vue';
 
 
 export default {
-    props: ['spotlight'],
-    data: () => ({
-        searchQuery: '',
-        searchResults: []
-    }),
+    props: ['state', 'spotlight'],
     created() {
         this.performSearch = _.debounce(this._performSearch, 500);
     },
     methods: {
         search(query, opts) {
-            this.searchQuery = query;
+            this.state.query = query;
             try {
                 return this._performSearch(query, opts);  // invoke search immediately
             }
@@ -51,15 +47,13 @@ export default {
             var self = this;
             var use = SEARCH_SCOPES[opts && opts.scope] || SEARCH_SCOPES['default'];
             return this._lastResult = use.search(query).then(function(res) {
-                self.searchResults = res.items;
+                self.state.results = res.items;
                 return res;
             });
         },
-        isVisible(item) { return ['youtube#video', Playlist.KIND.LOCAL].includes(this.itemKind(item)); },
-        itemId(item) { return YoutubeItem.id(item); },
-        itemKind(item) { return YoutubeItem.kind(item); },
         blur() {
-            $(this.$el).find('input').trigger('blur');
+            this.$refs.query.blur();
+            this.performSearch.flush();
         },
         selectAll() {
             this.$refs.query.select();
@@ -71,7 +65,7 @@ export default {
         }
     },
     watch: {
-        searchQuery(newValue, oldValue) {
+        'state.query'(newValue, oldValue) {
             if (newValue.length > 2)
                 this.performSearch(newValue);
         }

@@ -22,6 +22,7 @@
         "lodash": "^4.17.19",
         "loudness": "^0.4.2",
         "mkdirp": "^1.0.4",
+        "node-pty": "github:corwin-of-amber/node-pty#rust-port",
         "vue": "^3.4.38",
         "ws": "^7.3.0"
     },
@@ -32,6 +33,7 @@
         "@babel/plugin-transform-runtime": "^7.24.7",
         "@babel/preset-env": "^7.25.3",
         "@babel/runtime": "7.24",
+        "@types/lodash": "^4.17.7",
         "@types/node": "^22.5.0",
         "async_hooks": "^1.0.0",
         "babel-loader": "^9.1.3",

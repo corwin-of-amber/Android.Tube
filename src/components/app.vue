@@ -1,8 +1,8 @@
 <template>
     <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
-        <volume-control ref="volume"/>
+        <volume-control ref="volume" v-model="state.volume"/>
         <!-- <control-panel ref="controls" :show="show"/> -->
-        <search-pane ref="searchPane" @selected="startTrack" :spotlight="spotlight"/>
+        <search-pane ref="searchPane" @selected="startTrack" :state="state.search" :spotlight="spotlight"/>
         <playlist-pane v-if="playlist && show.playlist"
                        ref="playlistPane" v-model:playlist="playlist" :show="show"
                        @selected="startTrack" :spotlight="spotlight" :uploadedTrackIds="uploadedTrackIds"/>
@@ -15,9 +15,10 @@ import SearchPane from './search-pane.vue';
 import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
 
+import { AppState } from '../model';
+import { Playlist } from '../playlist';
 import { YoutubeItem } from '../player';
 import { DroppedFiles } from '../files';
-import { Playlist } from '../playlist';
 
 @Component({
     components: {
@@ -27,7 +28,7 @@ import { Playlist } from '../playlist';
     }
 })
 class IApp extends Vue {
-    @Prop data: any
+    @Prop state: AppState
 
     status = 'ready'
     curPlaying = undefined
@@ -47,7 +48,7 @@ class IApp extends Vue {
 
     get hasContextMenu() { return true; } // typeof AppContextMenu != 'undefined'; }
 
-    get focused() { var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); }
+    get focused() { return undefined; } //{ var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); }
     get spotlight() { return {active: this.curPlaying, focused: this.focused}; }
 
     search(query, opts) {
