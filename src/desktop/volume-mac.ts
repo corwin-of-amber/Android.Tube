@@ -30,7 +30,7 @@ class VolumeControlAS extends VolumeControl {
 
     async set(vol: number, max?: number) {
         if (max) vol = vol * this.max / max;
-        return this.jxa(`app.setVolume(null, { outputVolume: ${vol} });`);
+        await this.jxa(`app.setVolume(null, { outputVolume: ${vol} });`);
     }
 
     get max() { return 100; }

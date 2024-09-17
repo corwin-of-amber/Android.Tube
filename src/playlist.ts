@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { YoutubeItem } from './player';
 
 
 class Playlist {

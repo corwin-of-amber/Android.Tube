@@ -41,9 +41,9 @@ class InPagePlayerControls {
 
 
 abstract class VolumeControl {
-    async get(): Promise<number>
-    async set(vol: number, max?: number)
-    get max(): number
+    abstract get(): Promise<number>
+    abstract set(level: number, max?: number): Promise<void>
+    abstract get max(): number
 
     async delegate() {
         const max = 1000, ratio = max / this.max,

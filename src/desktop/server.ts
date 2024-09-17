@@ -5,6 +5,8 @@ import concat from 'concat-stream';
 import { InPagePlayerControls } from '../controls';
 import { VolumeControlAS } from './volume-mac';
 import { action } from '..';
+import { AppState } from '../model';
+import assert from 'assert';
 
 
 /**
@@ -14,6 +16,7 @@ class Server {
     port: number
     server: http.Server
     controls: any
+    state: AppState
     actionOpts = {scope: 'local', autoplay: true}
 
     constructor(port=2224) {
@@ -26,10 +29,10 @@ class Server {
 
         this.controls = new InPagePlayerControls(new VolumeControlAS);
 
-        window.addEventListener('unload', () => this.server.close());
+        window.addEventListener('beforeunload', () => this.server.close());
     }
 
-    handle(request, response) {
+    async handle(request, response) {
         console.log('%c[server] %s %s', 'color:blue', request.method, request.url);
         var serveStatic = (filename) => {
             console.log(filename);
@@ -39,6 +42,14 @@ class Server {
         try {
             var [path, q] = request.url.split('?')
             if (request.method === 'GET' && path === '/') {
+                serveStatic('build/kremlin/index.html');
+            }
+            else if (request.method === 'GET' && 
+                ['.js', '.css'].some(p => request.url.endsWith(p))) {
+                serveStatic('build/kremlin' + request.url);
+            }
+            /*
+            if (request.method === 'GET' && path === '/') {
                 serveStatic('app/src/main/assets/html/app.html');
             }
             else if (request.method === 'GET' && path === '/js/yapi.js') {
@@ -47,7 +58,7 @@ class Server {
             else if (request.method === 'GET' && 
                 ['/js/', '/css/'].some(p => request.url.startsWith(p))) {
                 serveStatic('app/src/main/assets' + request.url);
-            }
+            }*/
             else if (path === '/status') { this.controls.getStatus(function (s) { response.write(JSON.stringify(s)); response.end(); }); }
             else if (path === '/resume') { this.controls.resume(); response.end(); }
             else if (path === '/pause')  { this.controls.pause(); response.end(); }
@@ -55,7 +66,15 @@ class Server {
             else if (path === '/vol')    {
                 if (q) {
                     let mo = q.match(/^(\d+)\/(\d+)/);
-                    if (mo) this.controls.volume.set(+mo[1], +mo[2]);
+                    if (mo) {
+                        assert(+mo[2] === this.state.volume.max);
+                        this.state.volume.level = +mo[1];
+                    }
+                }
+                else {
+                    let level = await this.controls.volume.get(),
+                        max = this.controls.volume.max;
+                    response.write(`${level}/${max}`); /** @todo */
                 }
                 console.log('vol', q); response.end();
             }
@@ -78,6 +97,10 @@ class Server {
             response.write(JSON.stringify({error: e}));
             response.end();
         }
+    }
+
+    static isAvailable(): boolean {
+        return !!http.createServer;
     }
 }
 

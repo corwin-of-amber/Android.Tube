@@ -9,6 +9,7 @@ import './yt.css';
 
 import { YouTubeSearch } from './search/yapi';
 import { MDFindSearch } from './search/local-files';
+import { ClientPlayerControls, ClientPlayerCore, ClientSearch } from './client';
 import { YtdlPlayerInPageCore } from './player';
 
 import { VolumeControlAS } from './desktop/volume-mac';
@@ -18,7 +19,7 @@ import { Server } from './desktop/server';
 Object.assign(window, {Playlist, ytdl, VolumeControlAS});
 
 
-var playerCore: any, app: any, yapi: any, mainActivity: any;
+var playerCore: any, controls: any, app: any, yapi: any, mainActivity: any;
 
 
 async function main() {
@@ -27,19 +28,22 @@ async function main() {
     playerCore = new YtdlPlayerInPageCore;
     yapi = new YouTubeSearch;
 
-    var SEARCH_SCOPES = {yapi, local: new MDFindSearch, default: yapi},
+    var SEARCH_SCOPES = {yapi, local: new MDFindSearch, client: new ClientSearch, default: yapi},
+        server: Server;
+        
+    if (Server.isAvailable()) {
         server = new Server();
 
-    app.state.volume = await server.controls.volume.delegate();
+        controls = server.controls;
+        server.state = app.state;
+    }
+    else {
+        SEARCH_SCOPES.default = SEARCH_SCOPES.client;
+        playerCore = new ClientPlayerCore;
+        controls = new ClientPlayerControls;
+    }
 
-    /*
-    server.controls.getVolume(function(vol) {
-        console.log(vol);
-        let self = app.$refs.volume;
-        self.level = vol.level * self.max / vol.max;
-    });
-    */
-
+    app.state.volume = await controls.volume.delegate();
 
     Object.assign(window, {app, playerCore, yapi, SEARCH_SCOPES, server});
 }
