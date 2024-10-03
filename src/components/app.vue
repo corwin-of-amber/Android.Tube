@@ -1,7 +1,7 @@
 <template>
     <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
         <volume-control ref="volume" v-model="state.volume"/>
-        <!-- <control-panel ref="controls" :show="show"/> -->
+        <control-panel ref="controls" :state="state" :show="show"/>
         <search-pane ref="searchPane" @selected="startTrack" :state="state.search" :spotlight="spotlight"/>
         <playlist-pane v-if="playlist && show.playlist"
                        ref="playlistPane" v-model:playlist="playlist" :show="show"
@@ -14,6 +14,7 @@ import { Vue, Component, Prop, Ref, toNative } from 'vue-facing-decorator';
 import SearchPane from './search-pane.vue';
 import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
+import ControlPanel from './controls/control-panel.vue';
 
 import { AppState } from '../model';
 import { Playlist } from '../playlist';
@@ -24,7 +25,8 @@ import { DroppedFiles } from '../files';
     components: {
         SearchPane,
         PlaylistPane,
-        VolumeControl
+        VolumeControl,
+        ControlPanel
     }
 })
 class IApp extends Vue {

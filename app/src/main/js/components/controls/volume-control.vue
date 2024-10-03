@@ -6,6 +6,7 @@
 <style>
 input.volume-control {
     -webkit-appearance: none;
+    appearance: none;
     transform: rotate(270deg);
     background: #fff;
 }

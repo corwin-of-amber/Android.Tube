@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import $ from 'jquery';
+import { EventEmitter } from 'events';
 
 
 class InPagePlayerControls {
@@ -58,4 +59,62 @@ abstract class VolumeControl {
 }
 
 
-export { InPagePlayerControls, VolumeControl }
+class SleepTimer extends EventEmitter {
+    mins: number
+    defaultMins: number
+    startTime: Date
+    startMins: number
+    _ivals: NodeJS.Timeout[] = []
+
+    constructor(mins: number) {
+        super();
+        this.mins = this.defaultMins = mins;
+        this.on('fired', () => this.sleep());
+    }
+
+    start() {
+        this.startTime = new Date();
+        this.startMins = this.mins;
+        if (this._ivals.length === 0)
+            this._ivals.push(setInterval(() => this._monitor(), 2000));
+    }
+
+    stop() {
+        for (let ival of this._ivals)
+            clearInterval(ival);
+        this._ivals = [];
+    }
+
+    get isRunning() { return this._ivals.length > 0; }
+
+    _monitor() {
+        let secs = Math.round((+new Date() - +this.startTime) / 1000),
+            mins = secs; //Math.floor(secs / 60);
+        console.log(secs, mins);
+        this.mins = Math.max(0, this.startMins - mins);
+        if (this.mins === 0)
+            this._reached();
+    }
+
+    _reached() {
+        this.stop();
+        this.emit('fired');
+        setTimeout(() => this.reset(), 6000);
+    }
+
+    reset(mins?: number) {
+        let running = this.isRunning;
+        this.stop();
+        if (mins) this.defaultMins = mins;
+        this.mins = this.defaultMins;
+        if (running) this.start();
+    }
+
+    sleep() {
+        // macos
+        require('child_process').execSync('pmset sleepnow')
+    }
+}
+
+
+export { InPagePlayerControls, VolumeControl, SleepTimer }

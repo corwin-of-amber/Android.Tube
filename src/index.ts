@@ -14,6 +14,7 @@ import { YtdlPlayerInPageCore } from './player';
 
 import { VolumeControlAS } from './desktop/volume-mac';
 import { Server } from './desktop/server';
+import { SleepTimer } from './controls';
 
 
 Object.assign(window, {Playlist, ytdl, VolumeControlAS});
@@ -44,6 +45,7 @@ async function main() {
     }
 
     app.state.volume = await controls.volume.delegate();
+    app.state.sleep = new SleepTimer(40);
 
     Object.assign(window, {app, playerCore, yapi, SEARCH_SCOPES, server});
 }

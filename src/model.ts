@@ -8,6 +8,7 @@ class AppState {
       = {query: '', results: []}
 
     volume: {level: number, max: number} = {level: 500, max: 1000}
+    sleep: {mins: number, isRunning: boolean} = {mins: 0, isRunning: false}
 }
 
 
