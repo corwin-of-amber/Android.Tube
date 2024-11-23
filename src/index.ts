@@ -9,7 +9,8 @@ import './yt.css';
 
 import { YouTubeSearch } from './search/yapi';
 import { MDFindSearch } from './search/local-files';
-import { ClientPlayerControls, ClientPlayerCore, ClientSearch } from './client';
+import { ClientPlayerControls, ClientPlayerCore, 
+         ClientSearch, ClientSleepTimer } from './client';
 import { YtdlPlayerInPageCore } from './player';
 
 import { VolumeControlAS } from './desktop/volume-mac';
@@ -37,15 +38,17 @@ async function main() {
 
         controls = server.controls;
         server.state = app.state;
+
+        app.state.sleep = new SleepTimer(40);
     }
     else {
         SEARCH_SCOPES.default = SEARCH_SCOPES.client;
         playerCore = new ClientPlayerCore;
         controls = new ClientPlayerControls;
+        app.state.sleep = new ClientSleepTimer(40);
     }
 
     app.state.volume = await controls.volume.delegate();
-    app.state.sleep = new SleepTimer(40);
 
     Object.assign(window, {app, playerCore, yapi, SEARCH_SCOPES, server});
 }

@@ -16,7 +16,7 @@ import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
 import ControlPanel from './controls/control-panel.vue';
 
-import { AppState } from '../model';
+import { AppState, Track } from '../model';
 import { Playlist } from '../playlist';
 import { YoutubeItem } from '../player';
 import { DroppedFiles } from '../files';
@@ -33,7 +33,7 @@ class IApp extends Vue {
     @Prop state: AppState
 
     status = 'ready'
-    curPlaying = undefined
+    curPlaying: Track = undefined
     playlist = Playlist.restore()
     playlists = []
     uploadedTrackIds = []
@@ -51,7 +51,12 @@ class IApp extends Vue {
     get hasContextMenu() { return true; } // typeof AppContextMenu != 'undefined'; }
 
     get focused() { return undefined; } //{ var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); }
-    get spotlight() { return {active: this.curPlaying, focused: this.focused}; }
+    get spotlight() {
+        return {
+            active: this.curPlaying && YoutubeItem.id(this.curPlaying),
+            focused: this.focused
+        };
+    }
 
     search(query, opts) {
         return this.searchPane.search(query, opts);
@@ -60,11 +65,25 @@ class IApp extends Vue {
     startTrack(item, opts) {
         var self = this, operation;
         this.status = 'pending';
-        this.curPlaying = YoutubeItem.id(item);
+        this.curPlaying = item;
 
-        operation = playerCore.watch(item.uri || this.curPlaying, opts);
+        if (this.playlist?.has(item)) {
+            operation = playerCore.watchFromList(
+                this.playlist.export(item),
+                {...(opts || {}), onend: () => this.playNext()});
+        }
+        else {
+            operation = playerCore.watch(item.uri || this.curPlaying, opts);
+        }
         operation.then(function() { self.status = 'playing'; })
                  .catch(function() { self.status = 'error'; });
+    }
+
+    playNext() {
+        let curIndex = this.playlist.indexOf(this.curPlaying as Playlist.Track);
+        if (curIndex >= 0 && curIndex < this.playlist.tracks.length - 1) {
+            this.startTrack(this.playlist.tracks[curIndex + 1], {autoplay: true});
+        }
     }
 
     /** UPLOAD PART **/

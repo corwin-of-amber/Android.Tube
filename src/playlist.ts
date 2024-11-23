@@ -1,12 +1,13 @@
 import $ from 'jquery';
 import { YoutubeItem } from './player';
+import * as model from './model';
 
 
 class Playlist {
 
     id: string
     name: string
-    tracks: any[]
+    tracks: Playlist.Track[]
 
     constructor(name, tracks) {
         this.name = name;
@@ -44,11 +45,11 @@ class Playlist {
         }
     }
 
-    addFile(file) {
+    addFile(file: string | {name: string, path: string}) {
         return this.add(Playlist.trackFromFile(file));
     }
 
-    indexOf(item) {
+    indexOf(item: Playlist.Track) {
         var id = JSON.stringify(item.id),
             itemId = item._playlistItem;
         return itemId
@@ -56,11 +57,10 @@ class Playlist {
                 : this.tracks.findIndex(function(e) { return JSON.stringify(e.id) === id; });
     }
 
-    find(item) {
-        return this.tracks[this.indexOf(item)];
-    }
+    has(item: Playlist.Track) { return this.indexOf(item) >= 0; }
+    find(item: Playlist.Track) { return this.tracks[this.indexOf(item)]; }
 
-    static from(props) {
+    static from(props): Playlist {
         if (typeof props === 'string') props = JSON.parse(props);
         var pl = Object.assign(new Playlist(null, null), props || {});
         if (!pl.id && pl.tracks.length > 0)
@@ -91,7 +91,7 @@ class Playlist {
         localStorage[key] = JSON.stringify(data);
     }
 
-    static restore(key?: string) {
+    static restore(key?: string): Playlist {
         key = key || Playlist.DEFAULT_STORAGE_KEY;
         return Playlist.from(localStorage && localStorage[key]);
     }
@@ -118,7 +118,7 @@ class Playlist {
         if (typeof file === 'string')
             file = {name: file.match(/[^/]*$/)?.[0] || '???', path: file};
         // @todo use URL.createObjectURL for blobs with no file:// access
-        return {id: sillyHash(file.path), kind: Playlist.KIND.LOCAL, 
+        return {id: sillyHash(file.path), kind: model.Track.Kind.LOCAL,
             snippet: {title: file.name}, uri: 'file://' + file.path};
     }
 
@@ -149,7 +149,7 @@ class Playlist {
         const mkTrack = function(track) {
             var id = YoutubeItem.id(track),
                 kind = /^youtube#/.exec(YoutubeItem.kind(track)) ?
-                        Playlist.KIND.YOUTUBE : Playlist.KIND.DIRECT;
+                        Playlist.EXPORT_KIND.YOUTUBE : Playlist.EXPORT_KIND.DIRECT;
             return {
                 id: id, kind: kind,
                 uri: track.uri || id
@@ -164,13 +164,21 @@ class Playlist {
     }
 
 
-    static KIND = {DIRECT: 1, YOUTUBE: 2, LOCAL: 3};
+    static EXPORT_KIND = {DIRECT: 1, YOUTUBE: 2, LOCAL: 3};
     static DEFAULT_STORAGE_KEY = 'tube.playlist';
 }
 
+namespace Playlist {
 
-function sillyHash(string) {
-    return string.split('').reduce((hash, char) => {
+    export type Track = model.Track & {
+        _playlist: string
+        _playlistItem: string
+    }
+
+}
+
+function sillyHash(s: string) {
+    return s.split('').reduce((hash, char) => {
         return char.charCodeAt(0) + (hash << 6) + (hash << 16) - hash;
     }, 0).toString(36);
 }

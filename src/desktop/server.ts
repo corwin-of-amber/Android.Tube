@@ -78,6 +78,12 @@ class Server {
                 }
                 console.log('vol', q); response.end();
             }
+            else if (path === '/sleep/start') {
+                this.state.sleep.isRunning = true; response.end();
+            }
+            else if (path === '/sleep/stop') {
+                this.state.sleep.isRunning = false; response.end();
+            }
             else if (request.method === 'POST') {
                 request.pipe(concat(async (msg) => {
                     let json = JSON.parse(msg);

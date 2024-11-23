@@ -128,7 +128,7 @@ class YtdlPlayerInPageCore extends YtdlPlayerCore {
         var a = $('<audio>').attr({controls: true, autoplay: opts && opts.autoplay});
         a.append($('<source>').attr('src', webm.url));
         if (opts && opts.onend) a.on('ended', opts.onend);
-        this.current = {track: webm, audio: a};
+        this.current = {track: urlOrId, audio: a};
         this._put(a[0]);
     }
 

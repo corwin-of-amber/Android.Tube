@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import { Playlist } from './playlist';
-import { VolumeControl } from './controls';
+import { VolumeControl, SleepTimer } from './controls';
 
 
 /* yapi proxy */
@@ -127,4 +127,17 @@ class ClientVolumeControl extends VolumeControl {
 }
 
 
-export { ClientSearch, ClientPlayerCore, ClientPlayerControls, ClientVolumeControl }
+class ClientSleepTimer extends SleepTimer {
+    _isRunning: boolean = false
+
+    get isRunning(): boolean {
+        return this._isRunning;
+    }
+
+    start() { server_action('sleep/start'); this._isRunning = true; }
+    stop()  { server_action('sleep/stop');  this._isRunning = false; }
+}
+
+
+export { ClientSearch, ClientPlayerCore, ClientPlayerControls, 
+         ClientVolumeControl, ClientSleepTimer }

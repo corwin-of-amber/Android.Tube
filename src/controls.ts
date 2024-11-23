@@ -86,6 +86,9 @@ class SleepTimer extends EventEmitter {
     }
 
     get isRunning() { return this._ivals.length > 0; }
+    set isRunning(v: boolean) {
+        v ? this.start() : this.stop();
+    }
 
     _monitor() {
         let secs = Math.round((+new Date() - +this.startTime) / 1000),
