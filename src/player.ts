@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import _ from 'lodash'
 import * as ytdl from '@distube/ytdl-core';
 
 
@@ -45,55 +46,68 @@ class YtdlPlayerCore {
         mainActivity.receivedUrl(urlOrId, webm.type, webm.url);
     }
 
-    getStream(youtubeUrl, type?, preferredFormats?) {
+    async getStream(youtubeUrl, type?, preferredFormats?) {
         var self = this;
         type = type || DEFAULT_MEDIA_TYPE;
         preferredFormats = preferredFormats || this.preferredFormats;
-        return ytdl.getInfo(youtubeUrl).then(function (info) {
+        try {
+            let info = await ytdl.getInfo(youtubeUrl);
             if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
     
             console.log('ytdl info:');
             console.log(`csn = ${info.csn}`);
-            var n = info.formats.length, i = 0, webm, rank;
-            for (let format of info.formats) {
+            let audioFormats = _.sortBy(
+                info.formats.filter(fmt => fmt.mimeType?.startsWith(type) && fmt.audioCodec),
+                fmt => this.preference(fmt, preferredFormats));
+            var n = audioFormats.length, i = 0;
+            for (let format of audioFormats) {
                 let ftype = format.mimeType;
+                console.log(format);
                 console.log(`format #${++i}/${n}: ${format.itag} ${ftype}\n` +
                     `        '${format.url}'`);
                 if (!format.url) {
                     console.warn(`        missing url (${JSON.stringify(format)})`);
                     continue;
                 }
-                if (ftype && ftype.startsWith(type)) {
-                    var r = preferredFormats.findIndex(
-                                function(re) { return re.exec(ftype); });
-                    if (r < 0) r = Infinity;
-                    if (!webm || r < rank) {
-                        webm = format;
-                        rank = r;
-                    }
+            }
+
+            var webm = undefined;
+            for (let format of audioFormats) {
+                if (await this.isAccessible(format)) {
+                    webm = format;
+                    break;
                 }
             }
 
             if (!webm) throw new Error(`no stream for '${youtubeUrl}' (${type}*)`);
 
             console.log(`selected format: ${webm.mimeType}`);
-            return webm;
-        })
-        .catch(function(err) {
+        }
+        catch (err) {
             console.error('ytdl error:\n' + err);
             throw err;
-        })
-        .then(function(webm) {
-            // Parse MPD
-            if (webm.url.match(/^https?:[/][/]manifest/)) {
-                return self.getStreamFromMPD(webm.url).then(function (url) {
-                    webm.url = url;
-                    return webm;
-                });
-            }
-            else
+        }
+        // Parse MPD
+        if (webm.url.match(/^https?:[/][/]manifest/)) {
+            return self.getStreamFromMPD(webm.url).then(function (url) {
+                webm.url = url;
                 return webm;
-        });
+            });
+        }
+        else
+            return webm;
+    }
+
+    preference(format, preferredFormats) {
+        let ftype = format.mimeType;
+        var r = preferredFormats.findIndex(
+            (re: RegExp) => re.exec(ftype));
+        return r >= 0 ? r : Infinity;
+    }
+
+    async isAccessible(format) {
+        /* is there a way to detect authorized streams without actually sending the request? */
+        return (await fetch(format.url, {method: 'HEAD'})).ok
     }
 
     getStreamFromMPD(url) {

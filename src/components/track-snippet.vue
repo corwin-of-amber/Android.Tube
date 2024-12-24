@@ -1,5 +1,5 @@
 <template>
-    <p class="video-snippet" :class="spotlight || {}" @click="$emit('click')"
+    <p class="video-snippet" :class="spotlight || {}"
             draggable="true" @dragstart="dragStart" @contextmenu.prevent="menu">
         <span class="title" v-html="item.snippet.title"/>
         <span class="duration" v-if="item.duration !== undefined">{{timestamp(item.duration)}}</span>

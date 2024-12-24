@@ -92,8 +92,7 @@ class SleepTimer extends EventEmitter {
 
     _monitor() {
         let secs = Math.round((+new Date() - +this.startTime) / 1000),
-            mins = secs; //Math.floor(secs / 60);
-        console.log(secs, mins);
+            mins = Math.floor(secs / 60);
         this.mins = Math.max(0, this.startMins - mins);
         if (this.mins === 0)
             this._reached();

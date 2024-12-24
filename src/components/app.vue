@@ -73,7 +73,7 @@ class IApp extends Vue {
                 {...(opts || {}), onend: () => this.playNext()});
         }
         else {
-            operation = playerCore.watch(item.uri || this.curPlaying, opts);
+            operation = playerCore.watch(item.uri || YoutubeItem.id(this.curPlaying), opts);
         }
         operation.then(function() { self.status = 'playing'; })
                  .catch(function() { self.status = 'error'; });
