@@ -1,0 +1,9 @@
+{
+    "name": "tube-sanity",
+    "description": "check whether youtube scraping is sane",
+    "version": "0.0.0",
+    "main": "index.html",
+    "dependencies": {
+        "@distube/ytdl-core": "file:packages/distubejs-ytdl-core"
+    }
+}
