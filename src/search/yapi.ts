@@ -7,6 +7,7 @@ const api_key = 'AIzaSyCXd3M-Cb0KvyBMKTNS23nfaoiez6l51Go',
 import $ from 'jquery';
 import { api_key, api_origin } from './yapi-keys';
 import { Track } from '../model';
+import { Playlist } from '../playlist';
 
 const api_endpoint = 'https://content.googleapis.com/youtube/v3';
 
@@ -37,7 +38,7 @@ class YouTubeSearch {
         return this.yapi('search', {maxResults: 50, part: 'snippet', pageToken: pageToken});
     }
 
-    playlistItems(playlistId) {
+    playlistItems(playlistId: string) {
         var self = this,
             props = {playlistId: playlistId, maxResults: 50, part: 'snippet'};
         return this.yapi('playlistItems', props)
@@ -49,13 +50,18 @@ class YouTubeSearch {
                 });
     }
 
-    playlistItemsAll(playlistId) {
+    playlistItemsAll(playlistId: string) {
         return this.playlistItems(playlistId).then(function(paged) {
             return paged.all().then(function(results) {
                 return [].concat.apply([],
                     results.map(function(r) { return r.items; }));
             });
         });
+    }
+
+    async importPlaylist(playlistId: string) {
+        return new Playlist('Imported').importYoutube(
+            await this.playlistItemsAll(playlistId))
     }
 
     asVideoId(query) {

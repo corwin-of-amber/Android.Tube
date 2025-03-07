@@ -9,9 +9,9 @@ class Playlist {
     name: string
     tracks: Playlist.Track[]
 
-    constructor(name, tracks) {
+    constructor(name: string, tracks: Playlist.Track[] = []) {
         this.name = name;
-        this.tracks = tracks || [];
+        this.tracks = tracks;
         this.id = Playlist.mkShortId();
     }
 
@@ -60,9 +60,9 @@ class Playlist {
     has(item: Playlist.Track) { return this.indexOf(item) >= 0; }
     find(item: Playlist.Track) { return this.tracks[this.indexOf(item)]; }
 
-    static from(props): Playlist {
+    static from(props: string | object): Playlist {
         if (typeof props === 'string') props = JSON.parse(props);
-        var pl = Object.assign(new Playlist(null, null), props || {});
+        var pl = Object.assign(new Playlist(''), props || {});
         if (!pl.id && pl.tracks.length > 0)
             pl.id = Playlist.mkShortId();
         for (let track of pl.tracks) {
@@ -93,7 +93,7 @@ class Playlist {
 
     static restore(key?: string): Playlist {
         key = key || Playlist.DEFAULT_STORAGE_KEY;
-        return Playlist.from(localStorage && localStorage[key]);
+        return Playlist.from(localStorage[key] ?? []);
     }
 
     static loadFromServer(id) {

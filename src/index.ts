@@ -17,6 +17,8 @@ import { VolumeControlAS } from './desktop/volume-mac';
 import { Server } from './desktop/server';
 import { SleepTimer } from './controls';
 
+import './infra/polyfill';
+
 
 Object.assign(window, {Playlist, ytdl, VolumeControlAS});
 

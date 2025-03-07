@@ -54,7 +54,7 @@ if (!RegExp.prototype.dotAll) {
     /* very-poor-man's 's' flag polyfill (specifically for `@distube/ytdl-core`) */
     let _RegExp = RegExp;
     window.RegExp = function(re, flags) {
-        if (flags === 's') return new _RegExp(re.replace('.*', '[^]*'));
+        if (flags === 's') return new _RegExp(re.replaceAll('.*', '[^]*').replaceAll('.+', '[^]+'));
         else return new _RegExp(re, flags);
     }
 }
@@ -98,7 +98,7 @@ class YtdlPlayerCore {
         var self = this;
         type = type || DEFAULT_MEDIA_TYPE;
         preferredFormats = preferredFormats || this.preferredFormats;
-        return ytdl.getInfo(youtubeUrl).then(function (info) {
+        return ytdl.getInfo(youtubeUrl, {playerClients: ['TV']}).then(function (info) {
             if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
     
             console.log('ytdl info:');

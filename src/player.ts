@@ -51,7 +51,7 @@ class YtdlPlayerCore {
         type = type || DEFAULT_MEDIA_TYPE;
         preferredFormats = preferredFormats || this.preferredFormats;
         try {
-            let info = await ytdl.getInfo(youtubeUrl);
+            let info = await ytdl.getInfo(youtubeUrl, {playerClients: ['TV']});
             if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
     
             console.log('ytdl info:');
