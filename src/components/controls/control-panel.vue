@@ -17,7 +17,7 @@
 </style>
 
 <script lang="ts">
-import { Vue, Component, Prop, toNative } from 'vue-facing-decorator';
+import { Vue, Component, Prop, Watch, toNative } from 'vue-facing-decorator';
 import PlayPauseButton from './play-pause-button.vue';
 import PositionBar from './position-bar.vue';
 import SleepTimer from './sleep-timer.vue'
@@ -34,19 +34,21 @@ export class IControlPanel extends Vue {
     expand = true
     status = {}
     monitorInterval = 500
+    _monitor: any
 
     toggle() {
         this.expand = !this.expand;
-        this.expand ? this.monitor() : this.unmonitor();
     }
 
     monitor() {
-        if (this._monitor) return;
-        var h;
-        this._monitor = setInterval(h = () => {
-            //controls.getStatus(s => { this.status = s; });
-        }, this.monitorInterval);
-        h();
+        if (!this._monitor) {
+            let h = () => {
+                let controls = (window as any).controls; /** @todo */
+                controls?.getStatus(s => { this.status = s; });
+            };
+            this._monitor = setInterval(h, this.monitorInterval);
+            h();
+        }
     }
     unmonitor() {
         if (this._monitor) {
@@ -62,8 +64,9 @@ export class IControlPanel extends Vue {
             this.state.sleep.start();
     }
 
-    mounted() {
-        if (this.expand) this.monitor();
+    @Watch('expand', {immediate: true})
+    _monitorSetup(expand: boolean) {
+        expand ? this.monitor() : this.unmonitor();
     }
 }
 

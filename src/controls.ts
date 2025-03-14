@@ -41,6 +41,35 @@ class InPagePlayerControls {
 }
 
 
+class AndroidAppPlayerControls {
+
+    volume: VolumeControl = new class extends VolumeControl {
+        async get(): Promise<number> { /* todo */ return 50; }
+        async set(level: number, max?: number) {
+            mainActivity.setVolume(level, max);
+        }
+        get max(): number { /* todo */ return 100; }
+    }
+
+    getStatus(cb) {
+        this.getPosition(function(pos) {
+            cb({position: pos, playing: !!pos.duration /** @todo */});
+        });
+    }
+    getPosition(cb) {
+        cb({pos: mainActivity.getPosition(),
+            duration: mainActivity.getDuration()});
+    }
+    seek(pos) {
+        mainActivity.setPosition(pos);
+    }
+    resume() { mainActivity.resume(); return true; }
+    pause() { mainActivity.pause(); return true; }
+}
+
+declare var mainActivity: any
+
+
 abstract class VolumeControl {
     abstract get(): Promise<number>
     abstract set(level: number, max?: number): Promise<void>
@@ -119,4 +148,5 @@ class SleepTimer extends EventEmitter {
 }
 
 
-export { InPagePlayerControls, VolumeControl, SleepTimer }
+export { InPagePlayerControls, AndroidAppPlayerControls,
+         VolumeControl, SleepTimer }

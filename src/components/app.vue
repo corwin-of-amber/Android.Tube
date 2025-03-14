@@ -76,7 +76,7 @@ class IApp extends Vue {
             operation = playerCore.watch(item.uri || YoutubeItem.id(this.curPlaying), opts);
         }
         operation.then(function() { self.status = 'playing'; })
-                 .catch(function() { self.status = 'error'; });
+                 .catch(function(e) { console.error(e); self.status = 'error'; });
     }
 
     playNext() {
@@ -84,6 +84,11 @@ class IApp extends Vue {
         if (curIndex >= 0 && curIndex < this.playlist.tracks.length - 1) {
             this.startTrack(this.playlist.tracks[curIndex + 1], {autoplay: true});
         }
+    }
+
+    openPlaylist(props: object) {
+        this.playlistPane.openPlaylist(props);
+        this.show.playlist = true;
     }
 
     /** UPLOAD PART **/

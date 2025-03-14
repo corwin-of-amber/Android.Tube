@@ -10,7 +10,9 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+/app/build
 **/js/build
+**/css/build
 /captures
 .externalNativeBuild
 /node_modules

@@ -417,7 +417,7 @@ public class HTTPD extends NanoWSD {
                     }
                 });
 
-            return ok();
+            return ok("ok");
         }
         catch (JSONException e) {
             return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "JSON format error: " + e);

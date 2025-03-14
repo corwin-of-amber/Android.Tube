@@ -15,8 +15,8 @@ export default {
         this.$parent.$watch('status', function(s) {
             var p = s.position;
             if (p) {
-                self.pos = self._pos = p.pos;
                 self.duration = p.duration;
+                self.pos = self._pos = p.pos;
             }
         });
     },

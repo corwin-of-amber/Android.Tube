@@ -28,6 +28,13 @@ export default {
         this.performSearch = _.debounce(this._performSearch, 500);
     },
     methods: {
+        parse(query) {
+            return query?.startsWith("'") ?
+                [query.slice(1), {scope: 'local'}] : [query, {}];
+        },
+        unparse(query, opts) {
+            return (opts?.scope === 'local' ? "'" : '') + query;
+        },
         search(query, opts) {
             this.state.query = query;
             try {
@@ -66,8 +73,9 @@ export default {
     },
     watch: {
         'state.query'(newValue, oldValue) {
-            if (newValue.length > 2)
-                this.performSearch(newValue);
+            let [query, opts] = this.parse(newValue);
+            if (query.length > 2)
+                this.performSearch(query, opts);
         }
     },
 

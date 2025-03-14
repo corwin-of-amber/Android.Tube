@@ -11,14 +11,16 @@ input.volume-control {
     background: #fff;
 }
 
-input.volume-control::-webkit-slider-runnable-track {
+input.volume-control::-webkit-slider-runnable-track,
+input.volume-control::-moz-range-track {
     background: linear-gradient(to top left,
         #a7b2ce 0%, #a7b2ce 50%, #fff 51%, #fff 100%);
     height: 20px;
     border: none;
 }
 
-input.volume-control::-webkit-slider-thumb {
+input.volume-control::-webkit-slider-thumb,
+input.volume-control::-moz-range-thumb {
     -webkit-appearance: none;
     width: 50px;
     height: 30px;

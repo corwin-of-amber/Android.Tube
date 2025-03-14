@@ -5,7 +5,7 @@
 if (![].findIndex) {
     Array.prototype.findIndex = function(p) {
         for (var i = 0; i < this.length; i++)
-            if (p(this[i])) return i;
+            if (p(this[i], i, this)) return i;
         return -1;
     }
 }
@@ -20,6 +20,16 @@ if (![].includes) {
         for (var i = 0; i < this.length; i++)
             if (this[i] === el) return true;
         return false;
+    }
+}
+if (![].flatMap) {
+    Array.prototype.flatMap = function(f) {
+        var res = [];
+        for (var i = 0; i < this.length; i++) {
+            var l = f.call(this, this[i], i, this);
+            res = res.concat(l);
+        }
+        return res;
     }
 }
 if (!Object.assign) {
