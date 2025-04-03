@@ -1,6 +1,7 @@
 import $ from 'jquery';
 import _ from 'lodash'
 import * as ytdl from '@distube/ytdl-core';
+import { YouTubeTestRun } from './testrun';
 
 
 declare var mainActivity: any;
@@ -51,7 +52,9 @@ class YtdlPlayerCore {
         type = type || DEFAULT_MEDIA_TYPE;
         preferredFormats = preferredFormats || this.preferredFormats;
         try {
-            let info = await ytdl.getInfo(youtubeUrl, {playerClients: ['TV']});
+            //let info = await ytdl.getInfo(youtubeUrl, {playerClients: ['TV']});
+            let tr = new YouTubeTestRun(youtubeUrl),
+                info = await tr.getInfoCompat();
             if (!info) throw new Error(`empty info for '${youtubeUrl}'`);
     
             console.log('ytdl info:');

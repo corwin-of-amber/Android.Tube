@@ -18,6 +18,7 @@ import { Server } from './desktop/server';
 import { AndroidAppPlayerControls, SleepTimer } from './controls';
 
 import './infra/polyfill';
+import { YouTubeTestRun } from './testrun';
 
 
 Object.assign(window, {Playlist, ytdl, VolumeControlAS});
@@ -28,6 +29,12 @@ declare var mainActivity: any;
 
 
 async function main() {
+    /*
+    let tr = new YouTubeTestRun('L5Ij7z1xh1M');
+    tr.go();
+    Object.assign(window, {tr});
+    */
+
     app = Vue.createApp(App, {state: Vue.reactive(new AppState())}).mount('#app');
 
     playerCore = new YtdlPlayerInPageCore;
