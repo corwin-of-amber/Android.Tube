@@ -11,7 +11,14 @@ input.volume-control {
     background: #fff;
 }
 
-input.volume-control::-webkit-slider-runnable-track,
+/** @todo switch to SCSS (right now Kremlin lacks support within Vue SFC) */
+input.volume-control::-webkit-slider-runnable-track {
+    background: linear-gradient(to top left,
+        #a7b2ce 0%, #a7b2ce 50%, #fff 51%, #fff 100%);
+    height: 20px;
+    border: none;
+}
+
 input.volume-control::-moz-range-track {
     background: linear-gradient(to top left,
         #a7b2ce 0%, #a7b2ce 50%, #fff 51%, #fff 100%);
@@ -19,9 +26,18 @@ input.volume-control::-moz-range-track {
     border: none;
 }
 
-input.volume-control::-webkit-slider-thumb,
-input.volume-control::-moz-range-thumb {
+
+input.volume-control::-webkit-slider-thumb {
     -webkit-appearance: none;
+    width: 50px;
+    height: 30px;
+    background: linear-gradient(to right,
+        transparent 0%, transparent 30%, #999 30%, #ddd 40%, #ddd 45%, #bbb 50%, 
+            #aaa 50%, #ddd 55%, #ddd 60%, #eee 70%, transparent 70%, transparent 100%);
+    margin-top: -7px;
+    border: none;
+}
+input.volume-control::-moz-range-thumb {
     width: 50px;
     height: 30px;
     background: linear-gradient(to right,
