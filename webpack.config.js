@@ -77,7 +77,7 @@ const ytdl = {
 
 
 const app = {
-  entry: './src/index.ts', //./build/kremlin/android/index.js',
+  entry: './src/index.ts',
   mode: 'production', //'development',
   devtool: false, //inline-source-map',
   output: {
@@ -106,7 +106,11 @@ const app = {
   },
   externals: {
     './desktop/volume-mac': '{}',
-    './desktop/server': '{}'
+    './desktop/server': '{}',
+    // this is for regex-translator's CLI so it can probably go away
+    // if it is only used at build time, as it should
+    'winston': '{}', 'wordwrap': '{}', 'table-layout': '{}', 'env-paths': '{}', 'command-line-usage': '{}', 
+    'application-log-winston-interface': '{}',
   },
   plugins: [
     new VueLoaderPlugin(),
