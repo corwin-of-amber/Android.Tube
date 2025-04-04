@@ -1,3 +1,4 @@
+import { YoutubeItem } from "./player"
 
 
 class AppState {
@@ -19,6 +20,7 @@ class Track {
     url?: string
 
     snippet?: any
+    contentDetails?: any
     duration: number[] = null
 
     constructor(id: string, kind: Track.Kind, title: string) {
@@ -28,8 +30,12 @@ class Track {
     }
 
     static fromYoutubeSearchResult(item: any): Track {
-        let track = new Track(item.id.videoId, Track.Kind.YOUTUBE, item.snippet.title);
+        let track = new Track(YoutubeItem.id(item), Track.Kind.YOUTUBE, item.snippet.title);
         track.snippet = item.snippet;
+        track.contentDetails = item.contentDetails;
+        if (track.contentDetails.duration)
+            track.duration = YoutubeItem.parseTimeStamp(track.contentDetails.duration);
+        /** @todo parse duration */
         return track;
     }
 }

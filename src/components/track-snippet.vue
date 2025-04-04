@@ -1,7 +1,7 @@
 <template>
     <p class="video-snippet" :class="spotlight || {}"
             draggable="true" @dragstart="dragStart" @contextmenu.prevent="menu">
-        <span class="title" v-html="item.snippet.title"/>
+        <span class="title" v-html="item.title ?? item.snippet?.title ?? '(no title)'"></span>
         <span class="duration" v-if="item.duration !== undefined">{{timestamp(item.duration)}}</span>
     </p>
 </template>
@@ -33,8 +33,8 @@ export default {
             }
         },
         timestamp(hms) {
-            return hms ? hms.filter(function(x) { return x; })
-                            .map(function(x) {return x.toString().padStart(2, '0'); }).join(':')
+            return hms ? hms.filter(x => x != undefined)
+                            .map(x => x.toString().padStart(2, '0')).join(':')
                        : "--:--";
             /*
             if (pt === -1) return "--:--";

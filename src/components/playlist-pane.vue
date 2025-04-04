@@ -19,10 +19,13 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
 import PlaylistCaption from './playlist-caption.vue'
 import TrackSnippet from './track-snippet.vue';
 import { YoutubeItem } from '../player';
+import { Playlist } from '../playlist';
+
+declare var yapi: any;
 
 
 export default {
@@ -40,7 +43,7 @@ export default {
     },
     methods: {
         newPlaylist() {
-            this.$emit('update:playlist', new Playlist());
+            this.$emit('update:playlist', new Playlist('-'));
         },
         openPlaylist(playlist) {
             var self = this;
@@ -72,6 +75,18 @@ export default {
                 pl.tracks = tracks;
                 self.$emit('update:playlist', pl);
             });
+        },
+        async loadTrackInfo() {
+            let playlist = this.playlist as Playlist;
+            for (let i in playlist.tracks) {
+                let t = playlist.tracks[i];
+                if (t.contentDetails && !t.duration) {
+                    t.duration = YoutubeItem.parseTimeStamp(t.contentDetails.duration);
+                }
+                if (!t.snippet || !t.contentDetails) {
+                    playlist.tracks[i] = await yapi.info(t.id);
+                }
+            }
         },
 
         spotlightOf(id) { /** @oops duplicated from <search-ui> */

@@ -8,6 +8,7 @@ import $ from 'jquery';
 import { api_key, api_origin } from './yapi-keys';
 import { Track } from '../model';
 import { Playlist } from '../playlist';
+import { YoutubeItem } from '../player';
 
 const api_endpoint = 'https://content.googleapis.com/youtube/v3';
 
@@ -24,6 +25,12 @@ class YouTubeSearch {
             .done(function(data) { resolve(data); })
             .fail(function(jq) { reject(jq.responseJSON); });
         });
+    }
+
+    /** @todo `details` and `snippet` are low-level versions of this. combine? */
+    info(id) {
+        let resp = this.yapi('videos', {id, part: 'snippet,contentDetails'});
+        return resp.then(({items}) => this.postprocessItems(items as any[])[0]);
     }
 
     search(query) {
@@ -75,7 +82,7 @@ class YouTubeSearch {
 
     postprocessItems(items: any[]): Track[] {
         return items.flatMap(item =>
-            item.id.kind === 'youtube#video' ? Track.fromYoutubeSearchResult(item) : []);
+            YoutubeItem.kind(item) === 'youtube#video' ? Track.fromYoutubeSearchResult(item) : []);
     }
 
     _details(videoId) {

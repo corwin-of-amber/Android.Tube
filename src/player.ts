@@ -183,6 +183,15 @@ class YoutubeItem {
     static webUrl(item) {
         return item.uri || `https://youtube.com/watch?v=${YoutubeItem.id(item)}`;
     }
+
+    static parseTimeStamp(pt: string): number[] {
+        let mo = pt.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+        if (mo) {
+            var h = mo[1], m = mo[2] || '0', s = mo[3] || '0';
+
+            return [h, m, s].filter(x => x).map(x => +x);
+        }        
+    }
 }
 
 
