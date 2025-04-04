@@ -90,9 +90,8 @@ public class MainActivity extends Activity {
         final String initialMessage = null;
                 //"{\"type\": \"search\", \"text\": \"accidentally in love\"}";
 
-        webView.getSettings().setUserAgentString(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.3");
-                //"Mozilla"); // avoid getting mobile-targeted pages
+        webView.getSettings().setUserAgentString(  /* for TV client */
+                "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override

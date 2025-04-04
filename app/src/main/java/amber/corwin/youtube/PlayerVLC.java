@@ -105,6 +105,7 @@ public class PlayerVLC {
                 media.addOption(":network-caching=1500");
                 player.setMedia(media);
                 engage(player, uri.toString());
+                media.release();
             }
             catch (IOException e) {
                 playerError("Failed to open " + uri + ": " + e.getMessage());
