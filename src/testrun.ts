@@ -14,6 +14,7 @@ class YouTubeTestRun {
     decrypt: DecryptFuncs
 
     DOMAIN = new URL('https://www.youtube.com')
+    FETCH_OPTS: RequestInit = {credentials: 'omit'}
 
     constructor(videoId: string) {
         this.videoId = videoId;
@@ -54,6 +55,10 @@ class YouTubeTestRun {
         return resp;
     }
 
+    _fetch(url: URL | string, init?: RequestInit) {
+        return fetch(url, {...this.FETCH_OPTS, ...init});
+    }
+
     async go() {
         let resp = await this.getInfoTV();
 
@@ -74,7 +79,7 @@ class YouTubeTestRun {
         let query = {'v': this.videoId, 'bpctr': '9999999999', 'has_verified': '1'},
             cookie = 'PREF=hl=en&tz=UTC; SOCS=CAI';
         let watchUrl = `https://www.youtube.com/watch?${new URLSearchParams(query)}`;
-        let req = await fetch(watchUrl, {headers: {'Cookie': cookie}}),
+        let req = await this._fetch(watchUrl, {headers: {'Cookie': cookie}}),
             webpage = await req.text();
 
         let ytcfg = this.extract_ytcfg(this.videoId, webpage),
@@ -85,7 +90,7 @@ class YouTubeTestRun {
 
     async processClientPageTV() {
         let clientUrl = new URL('/tv', this.DOMAIN);
-        let req = await fetch(clientUrl),
+        let req = await this._fetch(clientUrl, {credentials: 'omit'}),
             webpage = await req.text();
         //let webpage = fs.readFileSync('/tmp/webpage-tv', 'utf-8');
         return this.extract_ytcfg(this.videoId, webpage);
@@ -322,9 +327,8 @@ class YouTubeTestRun {
                 ...query
             };
 
-        let req = await fetch(new URL(path, this.DOMAIN),
-            {method: 'POST', headers, credentials: 'same-origin',
-             body: JSON.stringify(data)});
+        let req = await this._fetch(new URL(path, this.DOMAIN),
+            {method: 'POST', headers, body: JSON.stringify(data)});
 
         return await req.json();
     }
@@ -340,7 +344,7 @@ class YouTubeTestRun {
 
         console.log(method, path, headers, b && JSON.parse(b));
 
-        let req = await fetch(new URL(path, this.DOMAIN),
+        let req = await this._fetch(new URL(path, this.DOMAIN),
             {method: method, headers, credentials: 'same-origin', body: b});
         
         return await req.json();
@@ -353,12 +357,6 @@ class DecryptFuncs {
 
     sig: (s: string) => string
     nsig: (s: string) => string
-
-    regexes = new Map<string, RegExp>
-
-    constructor() {
-        this._precompilationPhase();
-    }
 
     /**
      * Reads the sig funcs from yt-dlp JSON cache.
@@ -401,36 +399,11 @@ class DecryptFuncs {
         return format;
     }
 
-    _precompilationPhase() {
-        // yt-dlp:_video.py:_extract_n_function_name
-        let py = String.raw`(?xs)
-            [;\n](?:
-                (?P<f>function\s+)|
-                (?:var\s+)?
-            )(?P<funcname>[a-zA-Z0-9_$]+)\s*(?(f)|=\s*function\s*)
-            \((?P<argname>[a-zA-Z0-9_$]+)\)\s*\{
-            (?:(?!\}[;\n]).)+
-            \}\s*catch\(\s*[a-zA-Z0-9_$]+\s*\)\s*
-            \{\s*return\s+%s\[%d\]\s*\+\s*(?P=argname)\s*\}\s*return\s+[^}]+\}[;\n]
-            `;
-        this.regexes.set(py.replace(/\s*/g, ''), this.convertPythonRegex(
-            py.replace('%s', '(?<arr>[$A-Za-z0-9_]+)').replace('%d', '(?<idx>\\d+)'), 'g'));
-
-        let pys = [
-            String.raw`\b(?P<var>[a-zA-Z0-9_$]+)&&\((?P=var)=(?P<sig>[a-zA-Z0-9_$]{2,})\(decodeURIComponent\((?P=var)\)\)`,
-            String.raw`(?P<sig>[a-zA-Z0-9_$]+)\s*=\s*function\(\s*(?P<arg>[a-zA-Z0-9_$]+)\s*\)\s*{\s*(?P=arg)\s*=\s*(?P=arg)\.split\(\s*""\s*\)\s*;\s*[^}]+;\s*return\s+(?P=arg)\.join\(\s*""\s*\)`,
-            String.raw`(?:\b|[^a-zA-Z0-9_$])(?P<sig>[a-zA-Z0-9_$]{2,})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9_$]{2}\.[a-zA-Z0-9_$]{2}\(a,\d+\))?`
-        ];
-        for (let py of pys) {
-            this.regexes.set(py.replace(/\s*/g, ''), this.convertPythonRegex(py));
-        }
-    }
-
     _(key: string) {
-        return this.regexes.get(key.replace(/\s+/g, ''));
+        return regexd.get(key);
     }
 
-    // yt-dlp:...py:parse_sig_js
+    // yt-dlp:_video.py:_parse_sig_js
     extract_sig_name(script: string) {
         let search_regrex = (pats: RegExp[], s: string) => 
                                 pats.map(p => s.match(p)).filter(x => x);
@@ -452,7 +425,6 @@ class DecryptFuncs {
     // yt-dlp:_video.py:_extract_n_function_name
     extract_nsig_name(script: string) {
         let funcname = [...script.matchAll(
-            // /[;\n](?:\bfunction\s+|\b(?:var\s+)?)(?<funcname>[a-zA-Z0-9_$]+)\s*(?:=\s*function\s*)?\((?<argname>[a-zA-Z0-9_$]+)\)\s*\{(?:(?!\}[;\n]).)+\}\s*catch\(\s*[a-zA-Z0-9_$]+\s*\)\s*\{\s*return\s+(?<arr>\w+)\[(?<idx>\d+)\]\s*\+\s*\k<argname>\s*\}\s*return\s+[^}]+\}[;\n]/gs)
             this._(String.raw`(?xs)
                 [;\n](?:
                     (?P<f>function\s+)|
@@ -467,7 +439,7 @@ class DecryptFuncs {
         ];
 
         /** @todo validate the placeholders via `debug_str`: */
-         /* `arr[idx].endsWith('_w8_')` */
+        /*  `arr[idx].endsWith('_w8_')` */
 
         assert(funcname.length == 1);
         return funcname[0].groups['funcname'];
@@ -519,33 +491,25 @@ class DecryptFuncs {
         let [params, body] = JSON.parse(fs.readFileSync(fn, 'utf-8')).data as [string[], string];
         return new Function(...params, body) as (s: string) => string;
     }
-
-    convertPythonRegex(re: string, flags: string = '') {
-        let med = rex.getMediaryStringFromRegexString(re, 're2') as string,
-            rflags = '';
-        med = med.replace(/^<MOP><ZOQ>(\w+)<MCP>/, (_, fl) => { rflags = fl; return ''; });
-        if (rflags.includes('x'))
-            med = med.replace(/ |<LB>/g, '');  /* verbose mode (?x) */  /** @todo also comments? */
-        med = med.replace(/<ZOQ>P<LES>(\w+)/g, (_,k) => `\\k<${k}>`);
-        med = med.replace(/<ZOQ><MOP>\w+<MCP>/g, ''); /* `(?(f)...)`  dropping it is not strictly correct */
-        med = med.replace(/<CC_VERTICALSPACE>/g, '\\s');  /* bug in regex-translator? */
-        /** @todo use flags */
-        return new RegExp(rex.getRegexStringFromMediaryString(med, 'ecma'),
-            flags + rflags.replace('x', ''));
-    }
 }
 
 
 class PlayerJS {
+    id: string
     source: string
     _ctx: object = undefined
+
+    FETCH_OPTS: RequestInit = {credentials: 'omit'}
 
     constructor(source: string = undefined) {
         this.source = source;
     }
 
     async fromURL(url: URL) {
-        this.source = await (await fetch(url)).text();
+        let mo = url.pathname.match(/\/player\/([a-f0-9]+)/);
+        if (mo)
+            this.id = mo[1];
+        this.source = await (await fetch(url, this.FETCH_OPTS)).text();
         return this;
     }
 
@@ -567,6 +531,64 @@ class PlayerJS {
         return ctx;
     }
 }
+
+
+class YtDlpRegexDepository {
+
+    regexes: Map<string, RegExp>
+
+    get(key: string) {
+        if (!this.regexes) this._precompilationPhase();
+        return this.regexes.get(this.normalizeKey(key));
+    }
+
+    normalizeKey(key: string) {
+        return key.replace(/\s+/g, '');
+    }
+
+    _precompilationPhase() {
+        this.regexes = new Map;
+        // yt-dlp:_video.py:_extract_n_function_name
+        let py = String.raw`(?xs)
+            [;\n](?:
+                (?P<f>function\s+)|
+                (?:var\s+)?
+            )(?P<funcname>[a-zA-Z0-9_$]+)\s*(?(f)|=\s*function\s*)
+            \((?P<argname>[a-zA-Z0-9_$]+)\)\s*\{
+            (?:(?!\}[;\n]).)+
+            \}\s*catch\(\s*[a-zA-Z0-9_$]+\s*\)\s*
+            \{\s*return\s+%s\[%d\]\s*\+\s*(?P=argname)\s*\}\s*return\s+[^}]+\}[;\n]
+            `;
+        this.regexes.set(py.replace(/\s*/g, ''), this.convertPythonRegex(
+            py.replace('%s', '(?<arr>[$A-Za-z0-9_]+)').replace('%d', '(?<idx>\\d+)'), 'g'));
+
+        // yt-dlp:_video.py:_parse_sig_js
+        let pys = [
+            String.raw`\b(?P<var>[a-zA-Z0-9_$]+)&&\((?P=var)=(?P<sig>[a-zA-Z0-9_$]{2,})\(decodeURIComponent\((?P=var)\)\)`,
+            String.raw`(?P<sig>[a-zA-Z0-9_$]+)\s*=\s*function\(\s*(?P<arg>[a-zA-Z0-9_$]+)\s*\)\s*{\s*(?P=arg)\s*=\s*(?P=arg)\.split\(\s*""\s*\)\s*;\s*[^}]+;\s*return\s+(?P=arg)\.join\(\s*""\s*\)`,
+            String.raw`(?:\b|[^a-zA-Z0-9_$])(?P<sig>[a-zA-Z0-9_$]{2,})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9_$]{2}\.[a-zA-Z0-9_$]{2}\(a,\d+\))?`
+        ];
+        for (let py of pys) {
+            this.regexes.set(this.normalizeKey(py), this.convertPythonRegex(py));
+        }
+    }
+
+    convertPythonRegex(re: string, flags: string = '') {
+        let med = rex.getMediaryStringFromRegexString(re, 're2') as string,
+            rflags = '';
+        med = med.replace(/^<MOP><ZOQ>(\w+)<MCP>/, (_, fl) => { rflags = fl; return ''; });
+        if (rflags.includes('x'))
+            med = med.replace(/ |<LB>/g, '');  /* verbose mode (?x) */  /** @todo also comments? */
+        med = med.replace(/<ZOQ>P<LES>(\w+)/g, (_,k) => `\\k<${k}>`);
+        med = med.replace(/<ZOQ><MOP>\w+<MCP>/g, ''); /* `(?(f)...)`  dropping it is not strictly correct */
+        med = med.replace(/<CC_VERTICALSPACE>/g, '\\s');  /* bug in regex-translator? */
+
+        return new RegExp(rex.getRegexStringFromMediaryString(med, 'ecma'),
+            flags + rflags.replace('x', ''));
+    }
+}
+
+let regexd = new YtDlpRegexDepository;
 
 
 export { YouTubeTestRun }
