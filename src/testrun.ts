@@ -381,7 +381,7 @@ class DecryptFuncs {
 
     decipherStreamURL(format) {
         let sp = new URLSearchParams(format['signatureCipher']),
-            url = new URL(sp.get('url'));
+            url = new URL(format.url ?? sp.get('url'));
         console.log(Object.fromEntries(sp.entries()));
         console.log(Object.fromEntries(url.searchParams.entries()));
 
@@ -390,7 +390,8 @@ class DecryptFuncs {
             n = url.searchParams.get('n');
         console.log({sigkey, s, n});
 
-        url.searchParams.set(sigkey, this.sig(s));
+        if (s && sigkey)
+            url.searchParams.set(sigkey, this.sig(s));
         url.searchParams.set('n', this.nsig(n));
         console.log(url.href);
 

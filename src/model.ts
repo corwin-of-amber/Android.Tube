@@ -33,7 +33,7 @@ class Track {
         let track = new Track(YoutubeItem.id(item), Track.Kind.YOUTUBE, item.snippet.title);
         track.snippet = item.snippet;
         track.contentDetails = item.contentDetails;
-        if (track.contentDetails.duration)
+        if (track.contentDetails?.duration)
             track.duration = YoutubeItem.parseTimeStamp(track.contentDetails.duration);
         /** @todo parse duration */
         return track;
