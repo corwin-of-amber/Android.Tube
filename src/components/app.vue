@@ -1,5 +1,6 @@
 <template>
-    <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop">
+    <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop"
+            @contextmenu="openContextMenu">
         <volume-control ref="volume" v-model="state.volume"/>
         <control-panel ref="controls" :state="state" :show="show"/>
         <search-pane ref="searchPane" @selected="startTrack" :state="state.search" :spotlight="spotlight"/>
@@ -7,6 +8,7 @@
                        ref="playlistPane" v-model:playlist="playlist" :show="show"
                        @selected="startTrack" :spotlight="spotlight" :uploadedTrackIds="uploadedTrackIds"/>
     </div>
+    <app-context-menu ref="menu"/>
 </template>
 
 <script lang="ts">
@@ -15,6 +17,8 @@ import SearchPane from './search-pane.vue';
 import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
 import ControlPanel from './controls/control-panel.vue';
+
+import AppContextMenu from './app-context-menu.vue';
 
 import { AppState, Track } from '../model';
 import { Playlist } from '../playlist';
@@ -26,7 +30,8 @@ import { DroppedFiles } from '../files';
         SearchPane,
         PlaylistPane,
         VolumeControl,
-        ControlPanel
+        ControlPanel,
+        AppContextMenu
     }
 })
 class IApp extends Vue {
@@ -143,6 +148,10 @@ class IApp extends Vue {
             this.droppedFiles(ev.dataTransfer);
         else if (this.playlistPane)
             this.playlistPane.dropAway(ev);
+    }
+
+    openContextMenu(ev) {
+        this.$refs.menu.open(ev);
     }
 
     _monitorProgress(prop /* 'upload'|'download' */, obj: {filename?: string, progress?: number} = {}) {
