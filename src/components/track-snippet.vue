@@ -1,6 +1,7 @@
 <template>
     <p class="video-snippet" :class="spotlight || {}"
-            draggable="true" @dragstart="dragStart" @contextmenu.prevent="menu">
+            draggable="true" @dragstart="dragStart"
+            @contextmenu.prevent.stop="menu">
         <span class="title" v-html="item.title ?? item.snippet?.title ?? '(no title)'"></span>
         <span class="duration" v-if="item.duration !== undefined">{{timestamp(item.duration)}}</span>
     </p>
@@ -8,6 +9,8 @@
 
 
 <script>
+import { YoutubeItem } from '../player';
+
 export default {
     props: ['item', 'spotlight'],
     data() { return {duration: undefined}; },
@@ -36,18 +39,6 @@ export default {
             return hms ? hms.filter(x => x != undefined)
                             .map(x => x.toString().padStart(2, '0')).join(':')
                        : "--:--";
-            /*
-            if (pt === -1) return "--:--";
-
-            var mo = pt.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            if (mo) {
-                var h = mo[1], m = mo[2] || '0', s = mo[3] || '0';
-
-                return [h, m, s].filter(function(x) { return x; })
-                    .map(function(x) {return x.padStart(2, '0'); }).join(':');
-            }
-            else return "--:--";
-            */
         },
         dragStart(ev) {
             ev.dataTransfer.setData("json", JSON.stringify(this.item));
@@ -67,6 +58,7 @@ export default {
             }
         },
         menu(ev) {
+            /* should probably issue an action event instead and handle in App instead */
             if (this.$root.$refs.menu)
                 this.$root.$refs.menu.open(ev, this);
         },
@@ -77,7 +69,6 @@ export default {
             switch (action.type) {
             case 'copy-id': copy(YoutubeItem.id(this.item)); break;
             case 'copy-url': copy(YoutubeItem.webUrl(this.item)); break;
-            case 'set-global': window.sel = this.item; break;
             }
         }
     }

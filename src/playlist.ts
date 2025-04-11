@@ -49,16 +49,19 @@ class Playlist {
         return this.add(Playlist.trackFromFile(file));
     }
 
-    indexOf(item: Playlist.Track) {
-        var id = JSON.stringify(item.id),
-            itemId = item._playlistItem;
-        return itemId
-                ? this.tracks.findIndex(function(e) { return e._playlistItem === itemId; })
-                : this.tracks.findIndex(function(e) { return JSON.stringify(e.id) === id; });
+    indexOf(item: model.Track) {
+        if (Playlist.isTrack(item)) {
+            let itemId = item._playlistItem;
+            return this.tracks.findIndex(e => e._playlistItem === itemId);
+        }
+        else {
+            let id = JSON.stringify(item.id);
+            return this.tracks.findIndex(e => JSON.stringify(e.id) === id);
+        }
     }
 
-    has(item: Playlist.Track) { return this.indexOf(item) >= 0; }
-    find(item: Playlist.Track) { return this.tracks[this.indexOf(item)]; }
+    has(item: model.Track) { return this.indexOf(item) >= 0; }
+    find(item: model.Track) { return this.tracks[this.indexOf(item)]; }
 
     static from(props: string | object): Playlist {
         if (typeof props === 'string') props = JSON.parse(props);
@@ -173,6 +176,11 @@ namespace Playlist {
     export type Track = model.Track & {
         _playlist: string
         _playlistItem: string
+    }
+
+    export function isTrack(t: model.Track): t is Track {
+        let pt = t as Track;
+        return pt._playlist !== undefined && pt._playlistItem !== undefined;
     }
 
 }

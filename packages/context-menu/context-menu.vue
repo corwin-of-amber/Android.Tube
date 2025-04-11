@@ -27,10 +27,11 @@ export default {
         },
         _setupElement(el) {
             el.classList.add('compact');
-            el.setAttribute('tabindex', 1);
-            el.focus();
-            if (!this.options.debug)
+            if (!this.options.debug) {
+                el.setAttribute('tabindex', 1);
+                el.focus();
                 el.addEventListener('blur', () => this.onBlur());
+            }
         },
         close() {
             this.$refs.m.hide();

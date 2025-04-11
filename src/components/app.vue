@@ -8,7 +8,7 @@
                        ref="playlistPane" v-model:playlist="playlist" :show="show"
                        @selected="startTrack" :spotlight="spotlight" :uploadedTrackIds="uploadedTrackIds"/>
     </div>
-    <app-context-menu ref="menu"/>
+    <app-context-menu ref="menu" @action="menuAction"/>
 </template>
 
 <script lang="ts">
@@ -18,7 +18,7 @@ import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
 import ControlPanel from './controls/control-panel.vue';
 
-import AppContextMenu from './app-context-menu.vue';
+import AppContextMenu, { IAppContextMenu }  from './app-context-menu.vue';
 
 import { AppState, Track } from '../model';
 import { Playlist } from '../playlist';
@@ -46,12 +46,11 @@ class IApp extends Vue {
     show = {playlist: true, playlists: false}
     init = false
 
+    client: any /** @todo */
+
     @Ref searchPane: any
     @Ref playlistPane: any
-    @Ref menu: any
-
-    mounted() {
-    }
+    @Ref menu: IAppContextMenu
 
     get hasContextMenu() { return true; } // typeof AppContextMenu != 'undefined'; }
 
@@ -98,6 +97,10 @@ class IApp extends Vue {
 
     /** UPLOAD PART **/
 
+    connect() {
+        throw new Error('not implemented');
+    }
+
     upload(file, name) {
         var hasFS = (typeof process !== 'undefined' &&
                         !!(process.versions && process.versions.nw));   // NWjs
@@ -119,22 +122,15 @@ class IApp extends Vue {
         return Promise.resolve([]);
     }
 
-    uploadMultiple(files) {
-        var conts = [], _this = this;
+    async uploadMultiple(files: any[]) {
         for (var i = 0; i < files.length; i++) {
-            conts.push((function(f, id) {
-                return function() {
-                    return _this.upload(f, id).then(function(tracks) {
-                        console.log('enqueue', tracks);
-                        playerCore.enqueue(tracks);
-                    });
-                }
-            })(files[i], 'c'+i));
+            let tracks = await this.upload(files[i], `c${i}`);
+            console.log('enqueue', tracks);
+            playerCore.enqueue(tracks);
         }
-        waterfall(conts);
     }
 
-    droppedFiles(dt) {
+    droppedFiles(dt: DataTransfer) {
         var _this = this;
         DroppedFiles.fromDataTransfer(dt).then(function(files) {
             _this.uploadMultiple(files);
@@ -151,7 +147,7 @@ class IApp extends Vue {
     }
 
     openContextMenu(ev) {
-        this.$refs.menu.open(ev);
+        this.menu.open(ev);
     }
 
     _monitorProgress(prop /* 'upload'|'download' */, obj: {filename?: string, progress?: number} = {}) {
@@ -164,13 +160,67 @@ class IApp extends Vue {
             if (p) obj.progress = p; else o[prop] = undefined;
         };
     }
-}
 
+    /** MENU PART **/
 
-function waterfall(conts) {
-    return conts.reduce(function(p, cont) {
-        return p.then(cont);
-    }, Promise.resolve());
+    menuAction(action) {
+        console.log('menuAction', action)
+        if (action.for) action.for.action(action); /** @oops oh my */
+        switch (action.type) {
+        case 'playlist-new':
+            this.playlistPane.newPlaylist();
+            break;
+        case 'set-global':
+            console.log('temp1', (<any>window).temp1 = action.for.item);
+            break;
+        case 'download':
+            throw new Error('not implemented');
+            /*
+            AudioDownload.do(action.for.item, {},
+                this._monitorProgress('download'));*/
+            break;
+        case 'connect':
+            this.connect();
+            break;
+        case 'play-remote':
+            this.remotePlay(action.for.item, false, false, 'play');
+            break;
+        case 'play-remote-all':
+            this.remotePlay(action.for.item, true, false, 'play');
+            break;
+        case 'upload':
+            this.remotePlay(action.for.item, false, true /* force upload */);
+            break;
+        case 'upload-all':
+            this.remotePlay(action.for.item, true, true /* force upload */);
+            break;
+        }
+    }
+
+    remotePlay(item: Track, all, force, play?) {
+        if (!this.client) this.connect();
+        if (item) {
+            var [idx, tracks] = all ? this.itemToEnd(item)
+                                    : this.itemIdx(item);
+            this.client.upload.tracks(tracks,
+                this._monitorProgress('upload'), Math.max(idx, 0),
+                force, play);
+        }
+    }
+
+    itemIdx(item: Track): [number, Track[]] {
+        var idx = this.playlist ? this.playlist.indexOf(item) : 0;
+        return [idx, [item]];
+    }
+    itemToEnd(item: Track): [number, Track[]] {
+        if (Playlist.isTrack(item) && this.playlist) {
+            var idx = this.playlist.indexOf(item);
+            return idx >= 0 ? [idx, this.playlist.tracks.slice(idx)]
+                            : [0, [item]];
+        }
+        else return [0, [item]]
+    }    
+
 }
 
 

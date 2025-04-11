@@ -1,5 +1,5 @@
 <template>
-    <context-menu ref="m" @action="$emit('action', $event)">
+    <context-menu ref="m" @action="$emit('action', $event)" :options="{debug: true}">
       <item name="playlist-new">New playlist</item>
       <hr/>
       <item name="copy-id">Copy ID</item>
@@ -17,16 +17,20 @@
     </context-menu>
 </template>
 
-<script>
+<script lang="ts">
+import { Vue, Component, Ref, toNative } from 'vue-facing-decorator';
 import { ContextMenu, ContextMenuItem } from '../../packages/context-menu';
 
-export default {
-    components: {ContextMenu, item: ContextMenuItem},
-    computed: {
-        for() { return this.$refs.m.for; }
-    },
-    methods: {
-        open(...args) { this.$refs.m.open(...args); }
-    }
+@Component({
+    components: { ContextMenu, item: ContextMenuItem },
+    emits: ['action']
+})
+class IAppContextMenu extends Vue {
+    @Ref m: any
+    get for() { return this.m.for; }
+    open(...args) { this.m.open(...args); }
 }
+
+export { IAppContextMenu }
+export default toNative(IAppContextMenu)
 </script>
