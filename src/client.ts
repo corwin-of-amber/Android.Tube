@@ -1,11 +1,13 @@
 import $ from 'jquery';
 import { Playlist } from './playlist';
 import { VolumeControl, SleepTimer } from './controls';
+import { YoutubeItem } from './player';
+import { Track } from './model';
 
 
 /* yapi proxy */
 
-var SERVER = ""
+var SERVER = localStorage['tube.server'] ?? ""
 var JSON_CT = 'text/json; charset=utf-8'
 
 function server_action(cmd, path='/', responseType='text', method?: string): Promise<string> {
@@ -43,9 +45,11 @@ class ClientSearch {
 }
 
 class ClientPlayerCore {
-    upload: any
+    upload: ClientUploads
 
-    constructor() { /*this.upload = new ClientUploads(this);*/ }
+    constructor() {
+        this.upload = new ClientUploads(this);
+    }
 
     async watch(url) {
         var status = await server_action({type: 'watch', url});
@@ -55,9 +59,9 @@ class ClientPlayerCore {
         var status = await server_action(playlist, '/playlist');
         if (status !== 'ok') throw new Error(status);
     }
-    enqueue(tracks) {
+    enqueue(tracks, anew = false) {
         if (!Array.isArray(tracks)) tracks = [tracks];
-        return server_action({tracks}, '/playlist?enqueue');
+        return server_action({tracks}, `/playlist?enqueue${anew ? '&anew' : ''}`);
     }
     async uploadAndPlay(file, progress, name = 'c') {
         this.watch((await this.upload.file(file, progress, name)).uri);
@@ -136,6 +140,126 @@ class ClientSleepTimer extends SleepTimer {
 
     start() { server_action('sleep/start'); this._isRunning = true; }
     stop()  { server_action('sleep/stop');  this._isRunning = false; }
+}
+
+
+class ClientUploads {
+    client: ClientPlayerCore
+    remoteTracks: Map<string, any>
+    remoteKeys: string[]
+
+    constructor(client) {
+        this.client = client;
+        this.remoteTracks = new Map();
+        this.remoteKeys = [];  // list of keys in `remoteTracks` (for Vue)
+    }
+
+    async file(file, progress, name = 'c') {
+        console.log(`%cupload %c${file.name} [${file.type}]`, "color: #f99", "color: #f33");
+        var host = SERVER.length ? new URL(SERVER).host : undefined,
+            w = new WebSocketConnection(`cache/${name}`, host);
+        if (progress) w.uploadProgress = progress;
+        await w.upload(file);
+        console.log('%cupload finished.', "color: #f99"); 
+        return {id: name, kind: 2, uri: `file:///music/${name}`};
+    }
+
+    /**
+     * 
+     * @param {Array} tracks list of tracks to upload
+     * @param {Function} progress
+     *  upload progress callback; `({total, uploaded}, title) => void`
+     * @param {*} startIndex index of first track (tracks[0]) in playlist
+     * @param {*} force `true` to upload even if track has been previously 
+     *  uploaded. (default `false`)
+     * @param {*} play `'play'` to start playing once first track is uploaded;
+     *  `'enqueue'` to add to the end of the current play queue (if any);
+     *  `undefined` (the default) to just upload.
+     */
+    async tracks(tracks, progress, startIndex = 0, force = false, play = undefined) {
+        var i = startIndex, start = (play === 'play'),
+            uploadProgress = (p) => p && progress(p);
+        for (let track of tracks) {
+            let id = YoutubeItem.id(track);
+            if ((force || !this.remoteTracks.get(id)) && 
+                YoutubeItem.kind(track) == Track.Kind.LOCAL) {
+                var title = YoutubeItem.title(track) || 'untitled',
+                    ufile = new File(track.uri.replace(/^file:\/\//, ''), title);
+
+                progress({}, title);
+                this._set(track.id,
+                    await this.file(ufile, uploadProgress, `c${i}`));
+            }
+            if (play) {
+                await this._play(track, start);
+                start = false; // next one will enqueue
+            }
+            i++;
+        }
+        progress(undefined); // clear progress
+    }
+
+    _play(track, start: boolean) {
+        let id = YoutubeItem.id(track),
+            item = this.remoteTracks.get(id) || track;
+        if (!item.uri) item = {...item, uri: id};
+        return this.client.enqueue(item, start);
+    }
+
+    _set(key, value) {
+        this.remoteTracks.set(key, value);
+        if (!this.remoteKeys.includes(key)) this.remoteKeys.push(key);
+    }
+}
+
+/**
+ * Communicating with the server via WebSocket, for status and
+ * file uploads.
+ */
+class WebSocketConnection {
+    ws: WebSocket
+    uploadProgress = (_: {total: number, uploaded: number}) => {}
+    uploadSize: number
+
+    constructor(path, host=location.host) {
+        this.ws = new WebSocket(`ws://${host}/${path}`);
+    }
+
+    upload(file: File) {
+        var error: Event = undefined;
+        this.uploadSize = file.size;
+        return new Promise<void>((resolve, reject)  => {
+            this.ws.onopen = () => this.sendChunked(file);
+            this.ws.onerror = e => { error = e; reject(e); }
+            this.ws.onclose = () => !error && resolve();
+        }).finally(() => this.uploadProgress(undefined));  // clear progress
+    }
+
+    async sendChunked(file: File) {
+        var ws = this.ws;
+        this.monitorProgress();
+        
+        try {
+            await new Response(file).body.pipeTo(
+                new WritableStream({
+                    write(buf) { ws.send(buf); },
+                })
+            );
+        }
+        finally {
+            ws.close();
+        }
+    }
+
+    monitorProgress() {
+        var ws = this.ws;
+        var iv = setInterval(() => {
+            console.log(ws.bufferedAmount); 
+            var uploaded = Math.max(0, this.uploadSize - ws.bufferedAmount);
+            this.uploadProgress({total: this.uploadSize, uploaded})
+        }, 500);
+        ws.addEventListener('close', function() { clearInterval(iv); });
+    }
 }
 
 

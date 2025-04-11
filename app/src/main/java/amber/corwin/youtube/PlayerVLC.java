@@ -40,6 +40,7 @@ public class PlayerVLC {
     private Playlist playlist;
     private Playlist.Track nowPlaying;
     private Uri nowPlayingUri;
+    private Media nowPlayingMedia;
     private float loudnessAdjust = 1.0f;
 
     private UriHandler uriHandler = null;
@@ -97,11 +98,12 @@ public class PlayerVLC {
             });
         }
         else {
-
             MediaPlayer player = setup();
+            Media media = new Media(player.getLibVLC(), uri);
+
             try {
                 nowPlayingUri = setUri; /* track is set by playTrack if needed */
-                Media media = new Media(player.getLibVLC(), uri);
+                nowPlayingMedia = media;
                 media.addOption(":network-caching=1500");
                 player.setMedia(media);
                 engage(player, uri.toString());
@@ -176,6 +178,10 @@ public class PlayerVLC {
             enqueueTrack(track, forPlay && first);
             first = false;
         }
+    }
+
+    public void clearQueue() {
+        playlist = null;
     }
 
     private void playNextWhenDone(MediaPlayer player) {
@@ -316,9 +322,13 @@ public class PlayerVLC {
             if (mediaPlayer.isPlaying()) mediaPlayer.stop();
             queueRelease(mediaPlayer);
         }
+        if (nowPlayingMedia != null) {
+            nowPlayingMedia.release();
+        }
         mediaPlayer = null;
         nowPlaying = null;
         nowPlayingUri = null;
+        nowPlayingMedia = null;
     }
 
     private void queueRelease(final MediaPlayer player) {

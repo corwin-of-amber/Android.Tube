@@ -10,14 +10,24 @@ export default {
     props: {'name': {}, 'enabled': {default: true}},
     components: { Item },
     methods: {
-        action() {
+        action(ev) {
             var m = this.menu();
-            if (m) m.action({name: this.name});
+            if (m) {
+                m.action({name: this.widgetName(ev?.target) ?? this.name});
+            }
         },
         menu() {
             for (var v = this;
                  v && !(v._.type === ContextMenu); v = v.$parent) ;
             return v;
+        },
+        /**
+         * Allows defining a companion button or other sub-element that
+         * emits a different action than the item's name.
+         * @param el the clicked element
+         */
+        widgetName(el) {
+            return el?.classList.contains('companion') ? el.name : undefined;
         }
     }
 }

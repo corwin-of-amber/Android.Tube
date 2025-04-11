@@ -282,8 +282,12 @@ public class HTTPD extends NanoWSD {
 
         if (postData == null)
             return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain","missing request body");
-        else if (session.getUri().startsWith("/playlist"))
-            return playlist(postData, "enqueue".equals(session.getQueryParameterString()));
+        else if (session.getUri().startsWith("/playlist")) {
+            boolean enqueue = session.getParameters().containsKey("enqueue"),
+                    anew = session.getParameters().containsKey("anew");
+
+            return playlist(postData, enqueue, anew);
+        }
         else
             return sendToJS(postData);
     }
@@ -402,10 +406,11 @@ public class HTTPD extends NanoWSD {
         }
     }
 
-    private Response playlist(String playlistData, boolean enqueue) {
+    private Response playlist(String playlistData, boolean enqueue, boolean anew) {
         try {
             Playlist playlist = Playlist.fromJSON(playlistData);
-            if (enqueue) context.player.enqueueTracks(playlist, !context.player.isPlaying() /* @todo */);
+            if (anew) context.player.clearQueue();
+            if (enqueue) context.player.enqueueTracks(playlist, anew /* @todo */);
             else context.player.playFromList(playlist);
             // send to UI
             final String uiMsg = context.player.exportPlaylist();

@@ -24,6 +24,8 @@ import { AppState, Track } from '../model';
 import { Playlist } from '../playlist';
 import { YoutubeItem } from '../player';
 import { DroppedFiles } from '../files';
+import { ClientPlayerCore } from '../client';
+
 
 @Component({
     components: {
@@ -98,7 +100,7 @@ class IApp extends Vue {
     /** UPLOAD PART **/
 
     connect() {
-        throw new Error('not implemented');
+        this.client = new ClientPlayerCore();
     }
 
     upload(file, name) {

@@ -153,7 +153,7 @@ class YtdlPlayerInPageCore extends YtdlPlayerCore {
         if (!Array.isArray(tracks)) tracks = [tracks];
         tracks.forEach(function(track) {
             // @ts-ignore
-            app.$refs.playlist.playlist.add(track);
+            app.playlist.add(track);
         });
     }
 
@@ -172,7 +172,7 @@ class YoutubeItem {
     }
     static kind(item) {
         var id = item.id || item.snippet && item.snippet.resourceId;
-        return (id && id.kind) || item.kind  /** makes you wish you had `?.` */
+        return id?.kind || item.kind;
     }
     static title(item) {
         return item.snippet && item.snippet.title;
