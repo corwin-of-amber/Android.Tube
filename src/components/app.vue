@@ -48,15 +48,24 @@ class IApp extends Vue {
     show = {playlist: true, playlists: false}
     init = false
 
-    client: any /** @todo */
+    menufor: any
+
+    client: ClientPlayerCore
 
     @Ref searchPane: any
     @Ref playlistPane: any
     @Ref menu: IAppContextMenu
 
-    get hasContextMenu() { return true; } // typeof AppContextMenu != 'undefined'; }
+    mounted() { this.init = true; }
 
-    get focused() { return undefined; } //{ var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); }
+    get focused() { 
+        if (this.init) {
+            let v = this.menu?.for?.item;
+            //return v && YoutubeItem.id(v);
+            return v;
+        }
+    }
+        //var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); }
     get spotlight() {
         return {
             active: this.curPlaying && YoutubeItem.id(this.curPlaying),
@@ -101,6 +110,7 @@ class IApp extends Vue {
 
     connect() {
         this.client = new ClientPlayerCore();
+        this.client.upload.remoteKeys = this.uploadedTrackIds;
     }
 
     upload(file, name) {

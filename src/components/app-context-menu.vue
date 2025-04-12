@@ -1,5 +1,5 @@
 <template>
-    <context-menu ref="m" @action="$emit('action', $event)" :options="{debug: true}">
+    <context-menu ref="m" @action="$emit('action', $event)" :options="{debug: false}">
       <item name="playlist-new">New playlist</item>
       <hr/>
       <item name="copy-id">Copy ID</item>

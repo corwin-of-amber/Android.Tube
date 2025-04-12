@@ -7,7 +7,7 @@
         <div id="search-results" class="list">
             <template v-for="item in state.results">
                 <track-snippet
-                    :item="item" :spotlight="spotlightOf(item.id)"
+                    :item="item" :spotlight="spotlightOf(item)"
                     @click="$emit('selected', item)"
                     @swipe="$emit('swipe', item)"/>
             </template>
@@ -17,9 +17,9 @@
 
 <script>
 import _ from 'lodash';
-import { YoutubeItem } from '../player';
 import TrackSnippet from './track-snippet.vue';
 import SearchButton from './search-button.vue';
+import { YoutubeItem } from '../player';
 
 
 export default {
@@ -66,9 +66,10 @@ export default {
             this.$refs.query.select();
         },
 
-        spotlightOf(id) {
+        spotlightOf(track) { /** @oops duplicated from <search-pane> */
+            let id = YoutubeItem.id(track);
             return id ? {active:  id === this.spotlight.active,
-                         focused: id === this.spotlight.focused} : {};
+                         focused: track === this.spotlight.focused} : {};
         }
     },
     watch: {

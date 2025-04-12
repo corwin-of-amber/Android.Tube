@@ -89,7 +89,7 @@ class Playlist {
         }
     }
 
-    static store(data: Playlist, key: string) {
+    static store(data: Playlist, key?: string) {
         key = key || Playlist.DEFAULT_STORAGE_KEY;
         localStorage[key] = JSON.stringify(data);
     }

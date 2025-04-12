@@ -12,7 +12,7 @@
                  @drop="dropItem(track, $event)">
                 <div class="gutter"></div>
                 <track-snippet
-                    :item="track" :spotlight="spotlightOf(itemId(track))"
+                    :item="track" :spotlight="spotlightOf(track)"
                     @click="$emit('selected', track)"/>
             </div>
         </div>
@@ -22,8 +22,9 @@
 <script lang="ts">
 import PlaylistCaption from './playlist-caption.vue'
 import TrackSnippet from './track-snippet.vue';
-import { YoutubeItem } from '../player';
+import { Track } from '../model';
 import { Playlist } from '../playlist';
+import { YoutubeItem } from '../player';
 
 declare var yapi: any;
 
@@ -33,13 +34,7 @@ export default {
     data: function() { return { dragState: undefined, dragItem: undefined, dragEdge: undefined }; },
 
     mounted() {
-        var self = this;
-        /*
-        this.$watch('playlist', function(playlist) {
-            if (!playlist.tracks) self.$set(playlist, 'tracks', []);
-            if (!playlist.id)     self.$set(playlist, 'id', Playlist.mkShortId());
-        }, {immediate: true});*/
-        this.$watch('playlist', function() { self.store(); }, {deep: true});
+        this.$watch('playlist', () => this.store(), {deep: true});
     },
     methods: {
         newPlaylist() {
@@ -89,9 +84,10 @@ export default {
             }
         },
 
-        spotlightOf(id) { /** @oops duplicated from <search-ui> */
+        spotlightOf(track: Track) { /** @oops duplicated from <search-pane> */
+            let id = YoutubeItem.id(track);
             return id ? {active:  id === this.spotlight.active,
-                         focused: id === this.spotlight.focused} : {};
+                         focused: track === this.spotlight.focused} : {};
         },
 
         dragOver(ev) {
@@ -143,8 +139,6 @@ export default {
                 }
             }
         },
-
-        itemId(item) { return YoutubeItem.id(item); },
 
         store() { Playlist.store(this.playlist) }
     },
