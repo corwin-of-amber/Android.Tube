@@ -1,15 +1,15 @@
 <template>
-    <context-menu ref="m">
+    <context-menu @hide="onClose" ref="m">
         <slot></slot>
     </context-menu>
 </template>
 
-<style src="./context-menu.css"></style>
+<style src="./context-menu.scss"></style>
 
 <script>
 import { Contextmenu as ContextMenu } from "v-contextmenu";
 import "v-contextmenu/dist/themes/default.css";
-import './context-menu.css'
+import './context-menu.scss';
 
 
 export default {
@@ -17,13 +17,19 @@ export default {
     data: () => ({for: undefined}),
     emits: ['action'],
     components: { ContextMenu },
+
+    mounted() {
+        // this is a bit low-level, in order to style the element
+        // before it is placed
+        this.$watch(() => this.$refs.m.contextmenuRef, el => {
+            if (el) this._setupElement(el);
+        });
+    },
+
     methods: {
         open(ev, whatFor) {
             this.for = whatFor;
             this.$refs.m.show(ev);
-            requestAnimationFrame(() => {
-                this._setupElement(document.querySelector('.v-contextmenu'));
-            });
         },
         _setupElement(el) {
             el.classList.add('compact');
@@ -40,7 +46,7 @@ export default {
             this.$emit('action', {type: ev.name, for: this.for});
         },
         onClose() {
-            setTimeout(() => this.for = undefined, 0); /** @oops must happen after `action` handler */
+            this.for = undefined;
         },
         onBlur() { this.close(); }
     }
