@@ -13,8 +13,9 @@ class MDFindSearch {
                 (error, stdout, stderr) => {
                     if (error) { console.error(`mdfind error:\n${stderr}`); reject(error); }
                     else {
-                        resolve({items: stdout.split('\n').filter(x => x)
-                                            .map(fn => Playlist.trackFromFile(fn))});
+                        let items = stdout.split('\n').filter(x => x)
+                            .map(fn => Playlist.trackFromFile(fn));
+                        resolve({items});
                     }
                 });
             });

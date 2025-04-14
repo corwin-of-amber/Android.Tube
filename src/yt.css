@@ -199,6 +199,10 @@ button[name="play-pause"] {
     min-width: 20px;    
 }
 
+div.playlist-ui {
+    padding-bottom: 2em;
+}
+
 .playlist-ui,
 .playlist-ui-index {
     /* @todo only on narrow screen and only when search ui is visible */

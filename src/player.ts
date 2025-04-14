@@ -37,9 +37,10 @@ class YtdlPlayerCore {
         }
     }
 
-    getWatchUrl(urlOrId, type?, preferredFormats?) {
-        if (ytdl.validateID(urlOrId) || ytdl.validateURL(urlOrId))
-            return this.getStream(urlOrId, type, preferredFormats);
+    getWatchUrl(urlOrId: string | URL, type?, preferredFormats?) {
+        let s = urlOrId instanceof URL ? urlOrId.href : urlOrId;
+        if (ytdl.validateID(s) || ytdl.validateURL(s))
+            return this.getStream(s, type, preferredFormats);
         else return Promise.resolve({url: urlOrId, type: 'unknown'});
     }
 
@@ -51,6 +52,8 @@ class YtdlPlayerCore {
         var self = this;
         type = type || DEFAULT_MEDIA_TYPE;
         preferredFormats = preferredFormats || this.preferredFormats;
+        /** @todo extract id from Url if using TestRun */
+
         try {
             //let info = await ytdl.getInfo(youtubeUrl, {playerClients: ['TV']});
             let tr = new YouTubeTestRun(youtubeUrl),

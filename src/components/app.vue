@@ -113,7 +113,7 @@ class IApp extends Vue {
         this.client.upload.remoteKeys = this.uploadedTrackIds;
     }
 
-    upload(file, name) {
+    async upload(file, name) {
         var hasFS = (typeof process !== 'undefined' &&
                         !!(process.versions && process.versions.nw));   // NWjs
         if (file.type == 'application/json') {
@@ -122,16 +122,16 @@ class IApp extends Vue {
         else if (file.type.match(/^(audio|video)[/]/) ||
                     file.name.match(/[.](mkv)$/)) {
             if (hasFS) {
-                return Promise.resolve([Playlist.trackFromFile(file)]);
+                return await Track.fromFileEx(file);
             }
             else {
-                return playerCore.upload.file(file, 
+                return [playerCore.upload.file(file, 
                     this._monitorProgress('upload', {filename: file.name}),
-                    name).then(x => [x]);
+                    name)];
             }
         }
         else console.warn("unrecognized file type: " + file.type);
-        return Promise.resolve([]);
+        return [];
     }
 
     async uploadMultiple(files: any[]) {

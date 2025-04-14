@@ -1,6 +1,7 @@
-import $ from 'jquery';
+import _ from 'lodash';
 import { YoutubeItem } from './player';
 import * as model from './model';
+import { saveFile } from './infra/file-dialog';
 
 
 class Playlist {
@@ -63,6 +64,19 @@ class Playlist {
     has(item: model.Track) { return this.indexOf(item) >= 0; }
     find(item: model.Track) { return this.tracks[this.indexOf(item)]; }
 
+    /**
+     * @param by sorting order. Default is by track number (if present).
+     */
+    sort(by?: (t: model.Track) => any) {
+        let key = by ?? ((t: model.Track) => t.snippet?.track?.no ?? 1e6);
+            //cmp = <T>(x: T, y: T) => x < y ? -1 : x > y ? 1 : 0;
+        this.tracks = _.sortBy<Playlist.Track>(this.tracks, key);
+    }
+
+    shuffle() {
+        this.tracks = _.shuffle(this.tracks);
+    }
+
     static from(props: string | object): Playlist {
         if (typeof props === 'string') props = JSON.parse(props);
         var pl = Object.assign(new Playlist(''), props || {});
@@ -106,9 +120,7 @@ class Playlist {
 
     download(filename: string) {
         if (!filename) filename = `${this.name || 'playlist'}.json`;
-        var blob = new Blob([JSON.stringify(this)]);
-        $('<a>').attr({href: URL.createObjectURL(blob), download: filename})
-            [0].click();
+        saveFile(filename, JSON.stringify(this));
     }
 
     static upload(blob: Blob) {
@@ -117,12 +129,9 @@ class Playlist {
         });
     }
 
-    static trackFromFile(file: string | {name: string, path: string}) {
-        if (typeof file === 'string')
-            file = {name: file.match(/[^/]*$/)?.[0] || '???', path: file};
-        // @todo use URL.createObjectURL for blobs with no file:// access
-        return {id: sillyHash(file.path), kind: model.Track.Kind.LOCAL,
-            snippet: {title: file.name}, uri: 'file://' + file.path};
+    /** @deprecated use `Track.fromFile` */
+    static trackFromFile(file: string | {name: string, path: string}): model.Track {
+        return model.Track.fromFile(file);
     }
 
     /**
@@ -183,12 +192,6 @@ namespace Playlist {
         return pt._playlist !== undefined && pt._playlistItem !== undefined;
     }
 
-}
-
-function sillyHash(s: string) {
-    return s.split('').reduce((hash, char) => {
-        return char.charCodeAt(0) + (hash << 6) + (hash << 16) - hash;
-    }, 0).toString(36);
 }
 
 
