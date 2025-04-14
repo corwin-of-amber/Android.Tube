@@ -1,46 +1,79 @@
-import $ from 'jquery';
 import { Playlist } from './playlist';
 import { VolumeControl, SleepTimer } from './controls';
 import { YoutubeItem } from './player';
 import { Track } from './model';
 
 
-/* yapi proxy */
+class Client {
 
-var SERVER = localStorage['tube.server'] ?? ""
-var JSON_CT = 'text/json; charset=utf-8'
+    server: string
+    verbose = true
 
-function server_action(cmd, path='/', responseType='text', method?: string): Promise<string> {
-    console.log(cmd);
-
-    var verbose = true;
-
-    if (typeof cmd === 'string') {
-        if (!method) method = cmd.includes('?') ? 'POST' : 'GET';
-        path = '/' + cmd; cmd = undefined;
-        verbose = false;
+    constructor(server: string) {
+        this.server = server;
     }
-    else if (!method) { method = 'POST'; }
 
-    var url = `${SERVER}${path}`;
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            method, url, data: cmd && JSON.stringify(cmd), 
-            contentType: JSON_CT, dataType: responseType
-        })
-        .done(function(data) { verbose && console.log('ok', data); resolve(data); })
-        .fail(function(jq, status, err) { console.error(jq, status, err);
-            reject(jq.responseJSON || jq.responseText);
-         });
-    });
+    async action(cmd: string | object, path?: string, responseType?: 'text', method?: string): Promise<string>;
+    async action(cmd: string | object, path?: string, responseType?: 'json', method?: string): Promise<object>;
+
+    async action(cmd: string | object, path='/', responseType='text', method?: string): Promise<object | string> {
+        var verbose = this.verbose;
+
+        if (verbose) console.log(cmd);
+
+        if (typeof cmd === 'string') {
+            if (!method) method = cmd.includes('?') ? 'POST' : 'GET';
+            path = '/' + cmd; cmd = undefined;
+            verbose = false;
+        }
+        else if (!method) { method = 'POST'; }
+
+        var url = `${this.server}${path}`;
+
+        let req = await fetch(url, {
+            method,
+            headers: {'Content-Type': JSON_CT},
+            body: cmd && JSON.stringify(cmd)
+        });
+
+        try {
+            switch (responseType) {
+                case 'json': return await req.json();
+                default:     return await req.text();
+            }
+        }
+        catch (e) {
+            console.error(req, e);
+            throw e;
+        }
+
+        /*
+        return new Promise(function(resolve, reject) {
+            $.ajax({
+                method, url, data: cmd && JSON.stringify(cmd), 
+                contentType: JSON_CT, dataType: responseType
+            })
+            .done(function(data) { verbose && console.log('ok', data); resolve(data); })
+            .fail(function(jq, status, err) { console.error(jq, status, err);
+                reject(jq.responseJSON || jq.responseText);
+            });
+        });
+        */
+    }
 }
+
+const JSON_CT = 'text/json; charset=utf-8';
+
+
+const client = new Client(localStorage['tube.server'] ?? "");
+
 
 class ClientSearch {
     search(query) {
-        return server_action({type: 'search', text: query}, '/', 'json');
+        return client.action({type: 'search', text: query}, '/', 'json');
     }
     details(videoId) {
-        return server_action({type: 'details', videoId}, '/', 'json');
+        return client.action({type: 'details', videoId}, '/', 'json');
     }
 }
 
@@ -52,16 +85,16 @@ class ClientPlayerCore {
     }
 
     async watch(url) {
-        var status = await server_action({type: 'watch', url});
+        var status = await client.action({type: 'watch', url});
         if (status !== 'ok') throw new Error(status);
     }
     async watchFromList(playlist) {
-        var status = await server_action(playlist, '/playlist');
+        var status = await client.action(playlist, '/playlist');
         if (status !== 'ok') throw new Error(status);
     }
     enqueue(tracks, anew = false) {
         if (!Array.isArray(tracks)) tracks = [tracks];
-        return server_action({tracks}, `/playlist?enqueue${anew ? '&anew' : ''}`);
+        return client.action({tracks}, `/playlist?enqueue${anew ? '&anew' : ''}`);
     }
     async uploadAndPlay(file, progress, name = 'c') {
         this.watch((await this.upload.file(file, progress, name)).uri);
@@ -70,10 +103,10 @@ class ClientPlayerCore {
         this.enqueue(await this.upload.file(file, progress, name));
     }
     playlists() {
-        return server_action('playlists', null, 'json');
+        return client.action('playlists', null, 'json');
     }
     playlistGet(id) {
-        return server_action(`playlists/${id}`).then(Playlist.from);
+        return client.action(`playlists/${id}`).then(Playlist.from);
     }
 }
 
@@ -90,20 +123,20 @@ class ClientPlayerControls {
         this.volume.set(level, max);
     }
     getStatus(cb) {
-        server_action('status', null, 'json').then(cb);
+        client.action('status', null, 'json').then(cb);
     }
     getPosition(cb) {
-        server_action('pos').then(function(res) {
+        client.action('pos').then(function(res) {
             var pos_dur = res.split('/');
             cb({pos: +pos_dur[0], duration: +pos_dur[1]});
         });
     }
     seek(pos) {
         if (pos)
-            server_action(`pos?${pos}`);
+            client.action(`pos?${pos}`);
     }
-    resume() { server_action('resume'); return true; }
-    pause() { server_action('pause'); return true; }
+    resume() { client.action('resume'); return true; }
+    pause() { client.action('pause'); return true; }
 }
 
 
@@ -111,14 +144,14 @@ class ClientVolumeControl extends VolumeControl {
     async get() { return this._rescale(await this._get()); }
 
     async _get() {
-        let vol = await server_action('vol');
+        let vol = await client.action('vol');
         var mo = vol.match(/^(\d+)[/](\d+)/);
         return mo ? {level: +mo[1], max: +mo[2]} : null;
     }
 
     async set(level: number, max?: number) {
         max ??= this.max;
-        await server_action('vol?' + Math.round(level) + '/' + Math.round(max));
+        await client.action('vol?' + Math.round(level) + '/' + Math.round(max));
     }
 
     get max(): number {
@@ -138,8 +171,8 @@ class ClientSleepTimer extends SleepTimer {
         return this._isRunning;
     }
 
-    start() { server_action('sleep/start'); this._isRunning = true; }
-    stop()  { server_action('sleep/stop');  this._isRunning = false; }
+    start() { client.action('sleep/start'); this._isRunning = true; }
+    stop()  { client.action('sleep/stop');  this._isRunning = false; }
 }
 
 
@@ -156,7 +189,8 @@ class ClientUploads {
 
     async file(file, progress, name = 'c') {
         console.log(`%cupload %c${file.name} [${file.type}]`, "color: #f99", "color: #f33");
-        var host = SERVER.length ? new URL(SERVER).host : undefined,
+        var server = client.server,
+            host = server == "" ? undefined : new URL(server).host,
             w = new WebSocketConnection(`cache/${name}`, host);
         if (progress) w.uploadProgress = progress;
         await w.upload(file);
@@ -225,14 +259,18 @@ class WebSocketConnection {
         this.ws = new WebSocket(`ws://${host}/${path}`);
     }
 
-    upload(file: File) {
+    async upload(file: File) {
         var error: Event = undefined;
         this.uploadSize = file.size;
-        return new Promise<void>((resolve, reject)  => {
-            this.ws.onopen = () => this.sendChunked(file);
-            this.ws.onerror = e => { error = e; reject(e); }
-            this.ws.onclose = () => !error && resolve();
-        }).finally(() => this.uploadProgress(undefined));  // clear progress
+        try {
+            await new Promise<void>((resolve, reject) => {
+                this.ws.onopen = () => this.sendChunked(file);
+                this.ws.onerror = e => { error = e; reject(e); };
+                this.ws.onclose = () => !error && resolve();
+            });
+        } finally {
+            this.uploadProgress(undefined); // clear progress
+        }
     }
 
     async sendChunked(file: File) {
