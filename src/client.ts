@@ -19,16 +19,17 @@ class Client {
     async action(cmd: string | object, path='/', responseType='text', method?: string): Promise<object | string> {
         var verbose = this.verbose;
 
-        if (verbose) console.log(cmd);
-
         if (typeof cmd === 'string') {
+            if (cmd.startsWith('vol') || cmd === 'status') verbose = false;
             if (!method) method = cmd.includes('?') ? 'POST' : 'GET';
             path = '/' + cmd; cmd = undefined;
-            verbose = false;
         }
         else if (!method) { method = 'POST'; }
 
-        var url = `${this.server}${path}`;
+        if (verbose) console.log(cmd ?? path);
+
+        var url = `${this.server}${path}`,
+            ok = (data: any) => (verbose && console.log('ok', data), data);
 
         let req = await fetch(url, {
             method,
@@ -38,8 +39,8 @@ class Client {
 
         try {
             switch (responseType) {
-                case 'json': return await req.json();
-                default:     return await req.text();
+                case 'json': return ok(await req.json());
+                default:     return ok(await req.text());
             }
         }
         catch (e) {
