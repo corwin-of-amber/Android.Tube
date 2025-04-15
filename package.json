@@ -44,6 +44,8 @@
         "css-loader": "^7.1.2",
         "http2": "^3.3.6",
         "regex-translator": "^0.2.8",
+        "sass": "^1.86.3",
+        "sass-loader": "^16.0.5",
         "style-loader": "^4.0.0",
         "ts-loader": "^9.5.2",
         "util": "^0.12.5",

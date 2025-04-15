@@ -78,7 +78,7 @@ const ytdl = {
 
 const app = {
   entry: './src/index.ts',
-  mode: 'production', //'development',
+  mode: 'development',
   devtool: false, //inline-source-map',
   output: {
     filename: 'android.js',
