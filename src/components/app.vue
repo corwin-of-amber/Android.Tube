@@ -12,7 +12,8 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component, Prop, Ref, toNative } from 'vue-facing-decorator';
+import { toRaw } from 'vue';
+import { Vue, Component, Prop, Ref, Watch, toNative } from 'vue-facing-decorator';
 import SearchPane from './search-pane.vue';
 import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
@@ -23,8 +24,9 @@ import AppContextMenu, { IAppContextMenu }  from './app-context-menu.vue';
 import { AppState, Track } from '../model';
 import { Playlist } from '../playlist';
 import { YoutubeItem } from '../player';
+import { PlayerControls } from '../controls';
 import { DroppedFiles } from '../files';
-import { ClientPlayerCore } from '../client';
+import { ClientPlayerControls, ClientPlayerCore } from '../client';
 
 
 @Component({
@@ -41,14 +43,13 @@ class IApp extends Vue {
 
     status = 'ready'
     curPlaying: Track = undefined
+    controls: PlayerControls = undefined
     playlist = Playlist.restore()
     playlists = []
     uploadedTrackIds = []
     ongoing = {upload: undefined, download: undefined}
     show = {playlist: true, playlists: false}
     init = false
-
-    menufor: any
 
     client: ClientPlayerCore
 
@@ -58,14 +59,18 @@ class IApp extends Vue {
 
     mounted() { this.init = true; }
 
-    get focused() { 
-        if (this.init) {
-            let v = this.menu?.for?.item;
-            //return v && YoutubeItem.id(v);
-            return v;
-        }
+    @Watch('controls')
+    async co(controls: PlayerControls) {
+        controls = toRaw(controls);
+        this.state.volume = await controls.volume.delegate();
+        /** @todo get rid of this messy global */
+        Object.assign(window, {controls});
     }
-        //var v = this.init && this.$refs.menu; return v && v.for && YoutubeItem.id(v.for.item); }
+
+    get focused() { 
+        return this.init ? this.menu?.for?.item : undefined;
+    }
+
     get spotlight() {
         return {
             active: this.curPlaying && YoutubeItem.id(this.curPlaying),
@@ -106,11 +111,12 @@ class IApp extends Vue {
         this.show.playlist = true;
     }
 
-    /** UPLOAD PART **/
+    /** REMOTE PART **/
 
     connect() {
         this.client = new ClientPlayerCore();
         this.client.upload.remoteKeys = this.uploadedTrackIds;
+        this.controls = new ClientPlayerControls();
     }
 
     async upload(file, name) {
@@ -143,10 +149,8 @@ class IApp extends Vue {
     }
 
     droppedFiles(dt: DataTransfer) {
-        var _this = this;
-        DroppedFiles.fromDataTransfer(dt).then(function(files) {
-            _this.uploadMultiple(files);
-        });
+        DroppedFiles.fromDataTransfer(dt).then((files) =>
+            this.uploadMultiple(files));
     }
 
     dragOver(ev) { ev.preventDefault(); }

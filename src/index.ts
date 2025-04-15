@@ -15,7 +15,7 @@ import { YtdlPlayerCore, YtdlPlayerInPageCore } from './player';
 
 import { VolumeControlAS } from './desktop/volume-mac';
 import { Server } from './desktop/server';
-import { AndroidAppPlayerControls, SleepTimer } from './controls';
+import { AndroidAppPlayerControls, InPagePlayerControls, SleepTimer } from './controls';
 
 import './infra/polyfill';
 import { YouTubeTestRun } from './testrun';
@@ -24,7 +24,7 @@ import { YouTubeTestRun } from './testrun';
 Object.assign(window, {Playlist, ytdl, VolumeControlAS});
 
 
-var playerCore: any, controls: any, app: any, yapi: any;
+var app: any, playerCore: any, yapi: any;
 declare var mainActivity: any;
 
 
@@ -37,7 +37,6 @@ async function main() {
 
     app = Vue.createApp(App, {state: Vue.reactive(new AppState())}).mount('#app');
 
-    playerCore = new YtdlPlayerInPageCore;
     yapi = new YouTubeSearch;
 
     var SEARCH_SCOPES = {yapi, local: new MDFindSearch, client: new ClientSearch, default: yapi},
@@ -45,27 +44,26 @@ async function main() {
         
     if (typeof mainActivity !== 'undefined') {       /* In Android WebView */
         playerCore = new YtdlPlayerCore();
-        controls = new AndroidAppPlayerControls();
+        app.controls = new AndroidAppPlayerControls();
         app.state.sleep = new SleepTimer(40);
     }
     else if (Server?.isAvailable()) {             /* In NWjs standalone app */
-        server = new Server();
-
-        controls = server.controls;
-        server.state = app.state;
-
+        playerCore = new YtdlPlayerInPageCore();
+        app.controls = new InPagePlayerControls(new VolumeControlAS);
         app.state.sleep = new SleepTimer(40);
+
+        server = new Server();
+        server.state = app.state;
+        server.controls = Vue.toRaw(app.controls);
     }
     else {                                       /* In client browser */
         SEARCH_SCOPES.default = SEARCH_SCOPES.client;
         playerCore = new ClientPlayerCore;
-        controls = new ClientPlayerControls;
+        app.controls = new ClientPlayerControls;
         app.state.sleep = new ClientSleepTimer(40);
     }
-    
-    Object.assign(window, {app, playerCore, controls, yapi, SEARCH_SCOPES, server});
 
-    app.state.volume = await controls.volume.delegate();
+    Object.assign(window, {app, playerCore, yapi, SEARCH_SCOPES, server});
 
     window.addEventListener('message', msg => {
         console.log("message: " + JSON.stringify(msg), msg.data);
@@ -79,7 +77,9 @@ function action(cmd, opts?) {
     case 'watch':    return playerCore.watch(cmd.url, opts);
     case 'search':   return app.search(cmd.text, opts);
     case 'details':  return yapi.details(cmd.videoId);
-    case 'playlist': app.openPlaylist(cmd.data); return Promise.resolve();
+    case 'playlist':
+        app.openPlaylist(cmd.data);
+        return playerCore.watchFromList(app.playlist, opts);
     case 'request':
         var id = cmd.id;
         action(cmd.inner).then(function(res) {

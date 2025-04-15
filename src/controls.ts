@@ -3,7 +3,21 @@ import $ from 'jquery';
 import { EventEmitter } from 'events';
 
 
-class InPagePlayerControls {
+interface PlayerControls {
+    volume: VolumeControl
+
+    getStatus(cb: Callback<{position: PlayerPosition}>): void
+    getPosition(cb: Callback<PlayerPosition>): void
+    seek(pos: number): void
+    pause(): void
+    resume(): void
+}
+
+type Callback<T> = (value: T) => void;
+type PlayerPosition = {pos: number, duration: number};
+
+
+class InPagePlayerControls implements PlayerControls {
 
     volume: VolumeControl
 
@@ -41,7 +55,7 @@ class InPagePlayerControls {
 }
 
 
-class AndroidAppPlayerControls {
+class AndroidAppPlayerControls implements PlayerControls {
 
     volume: VolumeControl = new class extends VolumeControl {
         async get(): Promise<number> { /* todo */ return 50; }
@@ -148,5 +162,6 @@ class SleepTimer extends EventEmitter {
 }
 
 
-export { InPagePlayerControls, AndroidAppPlayerControls,
+export { PlayerControls, 
+         InPagePlayerControls, AndroidAppPlayerControls,
          VolumeControl, SleepTimer }

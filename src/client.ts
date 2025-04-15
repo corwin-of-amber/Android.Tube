@@ -1,5 +1,5 @@
 import { Playlist } from './playlist';
-import { VolumeControl, SleepTimer } from './controls';
+import { PlayerControls, VolumeControl, SleepTimer } from './controls';
 import { YoutubeItem } from './player';
 import { Track } from './model';
 
@@ -112,7 +112,7 @@ class ClientPlayerCore {
 }
 
 
-class ClientPlayerControls {
+class ClientPlayerControls implements PlayerControls {
     volume = new ClientVolumeControl
 
     /** @deprecated */

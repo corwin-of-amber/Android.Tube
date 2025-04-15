@@ -1,12 +1,11 @@
 import fs from 'fs';
 import http from 'http';
 import concat from 'concat-stream';
+import assert from 'assert';
 
-import { InPagePlayerControls } from '../controls';
-import { VolumeControlAS } from './volume-mac';
 import { action } from '..';
 import { AppState } from '../model';
-import assert from 'assert';
+import { PlayerControls } from '../controls';
 
 
 /**
@@ -15,7 +14,7 @@ import assert from 'assert';
 class Server {
     port: number
     server: http.Server
-    controls: any
+    controls: PlayerControls
     state: AppState
     actionOpts = {scope: 'local', autoplay: true}
 
@@ -26,8 +25,6 @@ class Server {
         this.server.listen(this.port);
 
         this.server.on('request', (request, response) => this.handle(request, response));
-
-        this.controls = new InPagePlayerControls(new VolumeControlAS);
 
         window.addEventListener('beforeunload', () => this.server.close());
     }
@@ -88,6 +85,8 @@ class Server {
                 request.pipe(concat(async (msg) => {
                     let json = JSON.parse(msg);
                     console.log('%c[server] %o', 'color: blue', json);
+                    if (path === '/playlist')
+                        json = {type: 'playlist', data: json};
                     var c = await action(json, this.actionOpts);
                     response.write(c ? JSON.stringify(c) : "ok");
                     response.end();
