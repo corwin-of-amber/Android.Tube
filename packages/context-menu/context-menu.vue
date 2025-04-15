@@ -21,7 +21,7 @@ export default {
     mounted() {
         // this is a bit low-level, in order to style the element
         // before it is placed
-        this.$watch(() => this.$refs.m.contextmenuRef, el => {
+        this.$watch(() => this._el(), el => {
             if (el) this._setupElement(el);
         });
     },
@@ -31,12 +31,15 @@ export default {
             this.for = whatFor;
             this.$refs.m.show(ev);
         },
+        _el() { 
+            return this.$refs.m.contextmenuRef;
+        },
         _setupElement(el) {
             el.classList.add('compact');
             if (!this.options.debug) {
                 el.setAttribute('tabindex', 1);
                 el.focus();
-                el.addEventListener('blur', () => this.onBlur());
+                el.addEventListener('blur', ev => this.onBlur(ev));
             }
         },
         close() {
@@ -48,7 +51,12 @@ export default {
         onClose() {
             this.for = undefined;
         },
-        onBlur() { this.close(); }
+        onBlur(ev) {
+            if (ev.currentTarget.contains(ev.relatedTarget))
+                this._el().focus();
+            else
+                this.close();
+        }
     }
 }
 </script>
