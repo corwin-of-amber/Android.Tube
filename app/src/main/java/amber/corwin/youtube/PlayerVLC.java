@@ -152,7 +152,7 @@ public class PlayerVLC {
 
     int enqueueTrack(Playlist.Track track, boolean forPlay) {
         int index = enqueueTrack(track);
-        if (forPlay && !isPlaying() && !isRequesting()) {
+        if (forPlay && !isPlaying()) {
             playlist.nowPlaying = index;
             playTrack(track);
         }

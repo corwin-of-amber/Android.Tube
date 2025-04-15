@@ -126,14 +126,15 @@ public class HTTPD extends NanoWSD {
         String q = session.getQueryParameterString();
         try {
             if (method == Method.GET)
-                return newFixedLengthResponse("" + context.player.getVolume() + ";" + context.getVolume());
+                return newFixedLengthResponse(
+                    context.player.getVolume() + ";" + context.getVolume());
             else {
                 if (q != null) {
                     String[] volumes = q.split(";");
-                    if (volumes.length >= 1 && volumes[0].length() > 0) {
+                    if (volumes.length >= 1 && !volumes[0].isEmpty()) {
                         context.player.setVolume(VolumeSetting.parse(volumes[0]));
                     }
-                    if (volumes.length >= 2 && volumes[1].length() > 0) {
+                    if (volumes.length >= 2 && !volumes[1].isEmpty()) {
                         context.setVolume(VolumeSetting.parse(volumes[1]));
                     }
                 }
@@ -165,9 +166,7 @@ public class HTTPD extends NanoWSD {
             JSONObject o = new JSONObject();
             PlaybackPosition pos = context.player.getPosition();
             if (pos != null) {
-                JSONObject opos = new JSONObject();
-                opos.put("pos", pos.pos);   opos.put("duration", pos.duration);
-                o.put("position", opos);
+                o.put("position", pos.toJSON());
             }
             Uri uri = context.player.getCurrentUri();
             if (uri != null)
@@ -183,6 +182,9 @@ public class HTTPD extends NanoWSD {
                 o.put("error", e);
             }
             o.put("playing", context.player.isPlaying());
+
+            o.put("volume", context.player.getVolume().toJSON());
+            o.put("master-volume", context.getVolume().toJSON());
 
             return newFixedLengthResponse(Response.Status.OK, "text/json", o.toString());
         }

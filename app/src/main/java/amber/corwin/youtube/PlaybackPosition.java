@@ -1,5 +1,8 @@
 package amber.corwin.youtube;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class PlaybackPosition {
 
     public int pos;
@@ -24,4 +27,10 @@ public class PlaybackPosition {
         else throw new NumberFormatException();
     }
 
+    public JSONObject toJSON() throws JSONException {
+        JSONObject o = new JSONObject();
+        o.put("pos", pos);
+        o.put("duration", duration);
+        return o;
+    }
 }

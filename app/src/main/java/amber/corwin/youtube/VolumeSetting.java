@@ -1,5 +1,8 @@
 package amber.corwin.youtube;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class VolumeSetting {
 
     public int level;
@@ -24,4 +27,10 @@ public class VolumeSetting {
         else throw new NumberFormatException();
     }
 
+    public JSONObject toJSON() throws JSONException {
+        JSONObject o = new JSONObject();
+        o.put("level", level);
+        o.put("max", max);
+        return o;
+    }
 }
