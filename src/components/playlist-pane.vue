@@ -25,8 +25,9 @@ import TrackSnippet from './track-snippet.vue';
 import { Track } from '../model';
 import { Playlist } from '../playlist';
 import { YoutubeItem } from '../player';
+import { YouTubeSearch } from '../search/yapi';
 
-declare var yapi: any;
+declare var yapi: YouTubeSearch;
 
 
 export default {
@@ -40,11 +41,10 @@ export default {
         newPlaylist() {
             this.$emit('update:playlist', new Playlist('-'));
         },
-        openPlaylist(playlist) {
-            var self = this;
-            return Playlist.open(playlist).then(function(playlist) {
-                self.$emit('update:playlist', playlist); return playlist;
-            });
+        async openPlaylist(playlistData) {
+            let playlist = await Playlist.open(playlistData);
+            this.$emit('update:playlist', playlist);
+            return playlist;
         },
         loadPlaylist(id) {
             var self = this;
@@ -79,7 +79,7 @@ export default {
                     t.duration = YoutubeItem.parseTimeStamp(t.contentDetails.duration);
                 }
                 if (!t.snippet || !t.contentDetails) {
-                    playlist.tracks[i] = await yapi.info(t.id);
+                    playlist.tracks[i] = await yapi.info(YoutubeItem.id(t)) as Playlist.Track;
                 }
             }
         },

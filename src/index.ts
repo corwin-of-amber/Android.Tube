@@ -72,20 +72,23 @@ async function main() {
     });
 }
 
-function action(cmd, opts?) {
+async function action(cmd, opts?) {
     switch (cmd.type) {
     case 'watch':    return playerCore.watch(cmd.url, opts);
     case 'search':   return app.search(cmd.text, opts);
     case 'details':  return yapi.details(cmd.videoId);
     case 'playlist':
-        app.openPlaylist(cmd.data);
-        return playerCore.watchFromList(app.playlist, opts);
+        await app.openPlaylist(cmd.data, opts);
+        return;
     case 'request':
         var id = cmd.id;
-        action(cmd.inner).then(function(res) {
+        try {
+            let res = await action(cmd.inner);
             mainActivity.postResponse(id, res ? JSON.stringify(res) : "ok");
-        })
-        .catch(function(e) { mainActivity.postResponse(id, JSON.stringify({error: e, msg: e.toString()})); });
+        }
+        catch (e) {
+            mainActivity.postResponse(id, JSON.stringify({error: e, msg: e.toString()}));
+        }
         break;
     default:
         var errmsg = "unknown command '" + cmd.type + "'";

@@ -90,7 +90,7 @@ class IApp extends Vue {
         if (this.playlist?.has(item)) {
             operation = playerCore.watchFromList(
                 this.playlist.export(item),
-                {...(opts || {}), onend: () => this.playNext()});
+                    {...opts, onend: () => this.playNext()});
         }
         else {
             operation = playerCore.watch(item.uri || YoutubeItem.id(this.curPlaying), opts);
@@ -106,9 +106,12 @@ class IApp extends Vue {
         }
     }
 
-    openPlaylist(props: object) {
-        this.playlistPane.openPlaylist(props);
+    async openPlaylist(playlistData: object, opts: any = {}) {
+        let playlist = await this.playlistPane.openPlaylist(playlistData);
         this.show.playlist = true;
+        if (opts.autoplay)
+            this.startTrack(playlist.tracks[playlist.nowPlaying], opts);
+        return playlist;
     }
 
     /** REMOTE PART **/
