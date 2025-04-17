@@ -21,6 +21,7 @@ import { Vue, Component, Prop, Watch, toNative } from 'vue-facing-decorator';
 import PlayPauseButton from './play-pause-button.vue';
 import PositionBar from './position-bar.vue';
 import SleepTimer from './sleep-timer.vue'
+import { Polling } from '../../infra/polling';
 
 @Component({
     components: {
@@ -33,6 +34,7 @@ export class IControlPanel extends Vue {
 
     expand = true
     status = {}
+    monitor = new  Polling(() => this._refresh(), 500)
     monitorInterval = 500
     _monitor: any
 
@@ -40,21 +42,9 @@ export class IControlPanel extends Vue {
         this.expand = !this.expand;
     }
 
-    monitor() {
-        if (!this._monitor) {
-            let h = () => {
-                let controls = (window as any).controls; /** @todo */
-                controls?.getStatus(s => { this.status = s; });
-            };
-            this._monitor = setInterval(h, this.monitorInterval);
-            h();
-        }
-    }
-    unmonitor() {
-        if (this._monitor) {
-            clearInterval(this._monitor);
-            this._monitor = null;
-        }
+    _refresh() {
+        let controls = (window as any).controls; /** @todo */
+        controls?.getStatus(s => { this.status = s; });
     }
 
     sleepToggle() {
@@ -66,7 +56,7 @@ export class IControlPanel extends Vue {
 
     @Watch('expand', {immediate: true})
     _monitorSetup(expand: boolean) {
-        expand ? this.monitor() : this.unmonitor();
+        expand ? this.monitor.start() : this.monitor.stop();
     }
 }
 
