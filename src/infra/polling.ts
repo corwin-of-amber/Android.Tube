@@ -5,7 +5,7 @@
  */
 class Polling {
     op: () => void
-    every: number
+    _every: number
     active: boolean = false
     mon: NodeJS.Timeout
 
@@ -13,7 +13,7 @@ class Polling {
 
     constructor(op: () => void, every: number) {
         this.op = op;
-        this.every = every;
+        this._every = every;
 
         this._listener = () => this._vis();
         document.addEventListener('visibilitychange', this._listener);
@@ -21,6 +21,16 @@ class Polling {
 
     destroy() {
         document.removeEventListener('visibilitychange', this._listener);
+    }
+
+    get every() { return this._every }
+
+    set every(ms: number) {
+        if (this._every !== ms) {
+            this.pause();
+            this._every = ms;
+            this.resume();
+        }
     }
 
     start() {

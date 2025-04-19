@@ -2,7 +2,7 @@
     <div id="ui-container" :class="status" @dragover="dragOver" @drop="drop"
             @contextmenu="openContextMenu">
         <volume-control ref="volume" v-model="state.volume"/>
-        <control-panel ref="controls" :state="state" :show="show"/>
+        <control-panel ref="controlPanel" :state="state" :show="show"/>
         <search-pane ref="searchPane" @selected="startTrack" :state="state.search" :spotlight="spotlight"/>
         <playlist-pane v-if="playlist && show.playlist"
                        ref="playlistPane" v-model:playlist="playlist" :show="show"
@@ -17,7 +17,7 @@ import { Vue, Component, Prop, Ref, Watch, toNative } from 'vue-facing-decorator
 import SearchPane from './search-pane.vue';
 import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
-import ControlPanel from './controls/control-panel.vue';
+import ControlPanel, { IControlPanel } from './controls/control-panel.vue';
 
 import AppContextMenu, { IAppContextMenu }  from './app-context-menu.vue';
 
@@ -27,6 +27,9 @@ import { YoutubeItem } from '../player';
 import { PlayerControls } from '../controls';
 import { DroppedFiles } from '../files';
 import { ClientPlayerControls, ClientPlayerCore } from '../client';
+import { Polling } from '../infra/polling';
+import { KeyMap } from '../infra/keymap';
+import { openDialog } from '../infra/file-dialog';
 
 
 @Component({
@@ -49,15 +52,24 @@ class IApp extends Vue {
     uploadedTrackIds = []
     ongoing = {upload: undefined, download: undefined}
     show = {playlist: true, playlists: false}
+    monitor: Polling
     init = false
 
     client: ClientPlayerCore
 
     @Ref searchPane: any
     @Ref playlistPane: any
+    @Ref controlPanel: IControlPanel
     @Ref menu: IAppContextMenu
 
-    mounted() { this.init = true; }
+    mounted() {
+        this.init = true;
+        this.monitor = new Polling(() => this._refreshStatus(), 500)
+        this.monitor.start();
+        this.$watch(() => this.controlPanel.expand,
+                e => this.monitor.every = e ? 500 : 3600e3,
+            {immediate: true});
+    }
 
     @Watch('controls')
     async co(controls: PlayerControls) {
@@ -65,6 +77,16 @@ class IApp extends Vue {
         this.state.volume = await controls.volume.delegate();
         /** @todo get rid of this messy global */
         Object.assign(window, {controls});
+    }
+
+    _refreshStatus() {
+        this.controls?.getStatus(s => {
+            this.controlPanel.status = s;
+            let track = (s as any).track;
+            if (track) {
+                this.curPlaying = {id: track} as Track;
+            }
+        });
     }
 
     get focused() { 
@@ -240,6 +262,20 @@ class IApp extends Vue {
         else return [0, [item]]
     }    
 
+    /** KEYMAP PART **/
+
+    globalKeyMap() {
+        return new KeyMap({
+            'Mod-S': () => this.playlist.download(),
+            'Mod-O': () => { this.openPlaylistDialog(); },
+            'Mod-L': () => { /* set focus to search bar */ }
+        })
+    }
+
+    async openPlaylistDialog() {
+        let fl = await openDialog('.json');
+        this.upload(fl, fl.name);
+    }
 }
 
 

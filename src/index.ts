@@ -65,6 +65,8 @@ async function main() {
 
     Object.assign(window, {app, playerCore, yapi, SEARCH_SCOPES, server});
 
+    app.globalKeyMap().attach(document.body);
+
     window.addEventListener('message', msg => {
         console.log("message: " + JSON.stringify(msg), msg.data);
         if (typeof msg.data === 'string')

@@ -69,7 +69,6 @@ class Playlist {
      */
     sort(by?: (t: model.Track) => any) {
         let key = by ?? ((t: model.Track) => t.snippet?.track?.no ?? 1e6);
-            //cmp = <T>(x: T, y: T) => x < y ? -1 : x > y ? 1 : 0;
         this.tracks = _.sortBy<Playlist.Track>(this.tracks, key);
     }
 
@@ -118,7 +117,7 @@ class Playlist {
         return server_action(`playlists/${id}`).then(Playlist.from);
     }
 
-    download(filename: string) {
+    download(filename?: string) {
         if (!filename) filename = `${this.name || 'playlist'}.json`;
         saveFile(filename, JSON.stringify(this));
     }
@@ -164,7 +163,8 @@ class Playlist {
                         Playlist.EXPORT_KIND.YOUTUBE : Playlist.EXPORT_KIND.DIRECT;
             return {
                 id: id, kind: kind,
-                uri: track.uri || id
+                uri: track.uri || id,
+                title: YoutubeItem.title(track)
             };
         };
 

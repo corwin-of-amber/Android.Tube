@@ -17,11 +17,10 @@
 </style>
 
 <script lang="ts">
-import { Vue, Component, Prop, Watch, toNative } from 'vue-facing-decorator';
+import { Vue, Component, Prop, toNative } from 'vue-facing-decorator';
 import PlayPauseButton from './play-pause-button.vue';
 import PositionBar from './position-bar.vue';
 import SleepTimer from './sleep-timer.vue'
-import { Polling } from '../../infra/polling';
 
 @Component({
     components: {
@@ -34,17 +33,9 @@ export class IControlPanel extends Vue {
 
     expand = true
     status = {}
-    monitor = new  Polling(() => this._refresh(), 500)
-    monitorInterval = 500
-    _monitor: any
 
     toggle() {
         this.expand = !this.expand;
-    }
-
-    _refresh() {
-        let controls = (window as any).controls; /** @todo */
-        controls?.getStatus(s => { this.status = s; });
     }
 
     sleepToggle() {
@@ -52,11 +43,6 @@ export class IControlPanel extends Vue {
             this.state.sleep.stop();
         else
             this.state.sleep.start();
-    }
-
-    @Watch('expand', {immediate: true})
-    _monitorSetup(expand: boolean) {
-        expand ? this.monitor.start() : this.monitor.stop();
     }
 }
 
