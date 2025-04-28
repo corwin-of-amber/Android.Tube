@@ -170,15 +170,15 @@ class YtdlPlayerInPageCore extends YtdlPlayerCore {
 
 class YoutubeItem {
     static id(item) {
-        var id = item.id || item.snippet && item.snippet.resourceId;
+        var id = item.id || item.snippet?.resourceId;
         return id.videoId || id;
     }
     static kind(item) {
-        var id = item.id || item.snippet && item.snippet.resourceId;
+        var id = item.id || item.snippet?.resourceId;
         return id?.kind || item.kind;
     }
     static title(item) {
-        return item.snippet && item.snippet.title;
+        return item.title ?? item.snippet?.title;
     }
     static mediaUriOrId(item) {
         return item.uri || YoutubeItem.id(item);

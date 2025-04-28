@@ -219,7 +219,8 @@ class ClientUploads {
             if ((force || !this.remoteTracks.get(id)) && 
                 YoutubeItem.kind(track) == Track.Kind.LOCAL) {
                 var title = YoutubeItem.title(track) || 'untitled',
-                    ufile = new File(track.uri.replace(/^file:\/\//, ''), title);
+                    filename = decodeURIComponent(new URL(track.uri).pathname),
+                    ufile = new File(filename as any, title); /** @note this is an NWjs constructor */
 
                 progress({}, title);
                 this._set(track.id,
