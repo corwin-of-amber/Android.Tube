@@ -32,8 +32,7 @@ namespace KeyMap {
     export type ModSet = {[modKey: string]: string}
 
     export function keyDescriptor(event: KeyboardEvent, mod?: ModSet) {
-        var base = event.key;  /** @todo this is already modified by Shift */
-        if (base.length === 1) base = base.toUpperCase();
+        var base = event.code.replace(/^(Key|Digit)(?=.$)/, '');  /* 'KeyA' -> 'A' */
         return modifiers(base, event, mod);
     }
 
@@ -47,7 +46,10 @@ namespace KeyMap {
         return name
     }
 
-    export const Mod = /Mac/.test(navigator.userAgent) ? 'Meta' : 'Ctrl';
+    const isMac = /Mac/.test(navigator.userAgent) ||
+        typeof process !== 'undefined' && process.platform == 'darwin';
+
+    export const Mod = isMac ? 'Meta' : 'Ctrl';
 }
 
 
