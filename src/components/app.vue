@@ -7,6 +7,12 @@
         <playlist-pane v-if="playlist && show.playlist"
                        ref="playlistPane" v-model:playlist="playlist" :show="show"
                        @selected="startTrack" :spotlight="spotlight" :uploadedTrackIds="uploadedTrackIds"/>
+
+        <!-- @oops using span to enable using CSS ':last-of-type' on divs above :/ -->
+        <span>
+            <progress-bar class="download-progress" v-bind="ongoing.download" v-if="ongoing.download"/>
+            <progress-bar class="upload-progress" v-bind="ongoing.upload" v-if="ongoing.upload"/>
+        </span>
     </div>
     <app-context-menu ref="menu" @action="menuAction"/>
 </template>
@@ -18,6 +24,7 @@ import SearchPane from './search-pane.vue';
 import PlaylistPane from './playlist-pane.vue';
 import VolumeControl from './controls/volume-slider.vue';
 import ControlPanel, { IControlPanel } from './controls/control-panel.vue';
+import ProgressBar from './controls/progress-bar.vue';
 
 import AppContextMenu, { IAppContextMenu }  from './app-context-menu.vue';
 
@@ -27,6 +34,7 @@ import { YoutubeItem } from '../player';
 import { PlayerControls } from '../controls';
 import { DroppedFiles } from '../files';
 import { ClientPlayerControls, ClientPlayerCore } from '../client';
+import { AudioDownload } from '../desktop/download';
 import { Polling } from '../infra/polling';
 import { KeyMap } from '../infra/keymap';
 import { openDialog } from '../infra/file-dialog';
@@ -38,7 +46,8 @@ import { openDialog } from '../infra/file-dialog';
         PlaylistPane,
         VolumeControl,
         ControlPanel,
-        AppContextMenu
+        AppContextMenu,
+        ProgressBar
     }
 })
 class IApp extends Vue {
@@ -157,7 +166,7 @@ class IApp extends Vue {
             }
             else {
                 return [playerCore.upload.file(file, 
-                    this._monitorProgress('upload', {filename: file.name}),
+                    this._monitorProgress('upload', {title: file.name}),
                     name)];
             }
         }
@@ -191,14 +200,16 @@ class IApp extends Vue {
         this.menu.open(ev);
     }
 
-    _monitorProgress(prop /* 'upload'|'download' */, obj: {filename?: string, progress?: number} = {}) {
+    _monitorProgress(prop /* 'upload'|'download' */, obj: {title?: string, progress?: {total: number, loaded: number}} = {}) {
         var o = this.ongoing;
-        obj.filename = obj.filename; // huh
-        obj.progress = undefined;
         o[prop] = obj;
+        obj = o[prop]; // get the reactive proxy
         return function(p, fn) {
-            if (fn) obj.filename = fn;
-            if (p) obj.progress = p; else o[prop] = undefined;
+            if (fn) obj.title = fn;
+            if (p)
+                obj.progress = {total: p.total, loaded: p.loaded ?? p.uploaded};
+            else
+                o[prop] = undefined;
         };
     }
 
@@ -215,10 +226,8 @@ class IApp extends Vue {
             console.log('temp1', (<any>window).temp1 = action.for.item);
             break;
         case 'download':
-            throw new Error('not implemented');
-            /*
             AudioDownload.do(action.for.item, {},
-                this._monitorProgress('download'));*/
+                this._monitorProgress('download'));
             break;
         case 'connect':
             this.connect();

@@ -1,9 +1,20 @@
-const /* fs = require('fs'), */ /** @oops in server.js */
-      mkdirp = require('mkdirp'),
-      ffmpeg = require('fluent-ffmpeg');
+import fs from 'fs';
+import ffmpeg from 'fluent-ffmpeg'; /** @kremlin.native */
+import { YoutubeItem } from '../player';
+
+
+declare var yapi
+pushpath('/opt/homebrew/bin');
 
 
 class AudioDownload {
+    url: string
+    info: any
+    metadata: any
+    interval: Interval
+
+    outfile: string
+
     constructor(url, info, metadata = {}) {
         if (url.url)   // format object from ytdl
             this.url = url.url;
@@ -14,7 +25,7 @@ class AudioDownload {
         this.interval = this._extractInterval(this.url);
     }
 
-    async do(progress = () => {}) {
+    async do(progress: ProgressCallback = () => {}) {
         var outfile = this._filename(), id = this._id();
         console.log(`[download] ${id} ${outfile}`);
         progress({id}, outfile);
@@ -41,7 +52,7 @@ class AudioDownload {
         return outfile;
     }
 
-    async _fetch(outfile, progress = () => {}) {
+    async _fetch(outfile: string, progress: ProgressCallback = () => {}) {
         var abuf = await fetchWithProgress(this.url, progress);
         fs.writeFileSync(outfile, new Uint8Array(abuf));
     }
@@ -67,7 +78,7 @@ class AudioDownload {
 
     fixContainer(infile, outfile, metadata={}) {
         var id = this._id();
-        return new Promise((resolve, reject) =>
+        return new Promise<void>((resolve, reject) =>
             ffmpeg(infile).audioCodec('copy')
             .inputOptions(this._intervalFlags(this.interval))
             .outputOption(...this._metadataFlags(metadata)) /* splat needed because flags may contain spaces etc. (fluent-ffmpeg weirdness http://fluent-ffmpeg.github.io/index.html#output-options) */
@@ -78,12 +89,11 @@ class AudioDownload {
 
     static async fromTrack(item, metadata = {}) {
         return new AudioDownload(
-            await playerCore.getWatchUrl(YoutubeItem.mediaUriOrId(item), '',
-                                         AudioDownload.PREFERRED_FORMATS),
+            await playerCore.getWatchUrl(YoutubeItem.mediaUriOrId(item)),
             item, metadata);
     }
 
-    static async do(items, metadata = {}, progress = () => {}) {
+    static async do(items, metadata: any = {}, progress: ProgressCallback = () => {}) {
         if (!Array.isArray(items)) items = [items];
         var trackMetadata = {...metadata, track: metadata.track || 1},
             report = new DownloadReport;
@@ -100,8 +110,8 @@ class AudioDownload {
         return report;
     }
 
-    _mktemp(filename) {
-        mkdirp.sync(AudioDownload.TEMPDIR);
+    _mktemp(filename: string) {
+        fs.mkdirSync(AudioDownload.TEMPDIR, {recursive: true});
         return `${AudioDownload.TEMPDIR}/${filename}`;
     }
 
@@ -143,12 +153,13 @@ class AudioDownload {
     }
 
     static TEMPDIR = '/tmp/Android.Tube';
-
-    static PREFERRED_FORMATS = PREFERRED_FORMATS;
 }
 
+type Interval = {from: number, to: number}
+type ProgressCallback = (state, filename?: string) => void
+
 // Here comes some boilerplate
-function fetchWithProgress(url, progress) {
+function fetchWithProgress(url, progress): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
         xhr.responseType = 'arraybuffer';
@@ -161,6 +172,8 @@ function fetchWithProgress(url, progress) {
 }
 
 class DownloadReport {
+    skipped: {item: any, desc: string, error: Error}[]
+
     constructor() {
         this.skipped = [];
     }
@@ -180,3 +193,17 @@ class DownloadReport {
         }
     }
 }
+
+
+/** 
+ * auxiliary function to add a location to the system PATH
+ *  (for `ffmpeg`)
+ */
+function pushpath(p) {
+    p = `:${p}`;
+    if (process?.env?.['PATH'] && !process?.env?.['PATH'].endsWith(p))
+        process.env['PATH'] += p;
+}
+
+
+export { AudioDownload }
