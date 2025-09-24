@@ -1,7 +1,7 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import vm from 'vm';
+import vm from 'vm';  /** @kremlin.native */
 
 import rex from 'regex-translator';
 
@@ -111,8 +111,10 @@ class YouTubeTestRun {
     }
 
     // yt-dlp:_video.py:_extract_player_url
-    extract_player_url(ytcfg) {
-        let p = ytcfg['PLAYER_JS_URL']; /** @todo */
+    extract_player_url(ytcfg, variant="main") {
+        let player_id = '0004de42'  // this is currently hard-coded in yt-dlp:_video.py:_get_player_js_version
+        let p = //ytcfg['PLAYER_JS_URL']; /** @todo */
+            `/s/player/${player_id}/${YouTubeTestRun._PLAYER_JS_VARIANT_MAP[variant]}`
         return new URL(p, this.DOMAIN);
     }
 
@@ -317,6 +319,19 @@ class YouTubeTestRun {
         sts = self._extract_signature_timestamp(video_id, player_url, master_ytcfg, fatal=False) if player_url else None
         yt_query.update(self._generate_player_context(sts))
         */
+    }
+
+    // yt-dlp:_video.py
+    static _PLAYER_JS_VARIANT_MAP = {
+        'main': 'player_ias.vflset/en_US/base.js',
+        'tcc': 'player_ias_tcc.vflset/en_US/base.js',
+        'tce': 'player_ias_tce.vflset/en_US/base.js',
+        'es5': 'player_es5.vflset/en_US/base.js',
+        'es6': 'player_es6.vflset/en_US/base.js',
+        'tv': 'tv-player-ias.vflset/tv-player-ias.js',
+        'tv_es6': 'tv-player-es6.vflset/tv-player-es6.js',
+        'phone': 'player-plasma-ias-phone-en_US.vflset/base.js',
+        'tablet': 'player-plasma-ias-tablet-en_US.vflset/base.js',
     }
 
     async makeApiRequest(ytcfg, path: string) {

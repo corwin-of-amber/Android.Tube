@@ -101,12 +101,13 @@ const app = {
       assert: require.resolve("assert/"),
       util: require.resolve("util/"),
       url: require.resolve("url/"),
-      events: require.resolve("events/")
+      events: require.resolve("events/"),
     }      
   },
   externals: {
     './desktop/volume-mac': '{}',
     './desktop/server': '{}',
+    '../desktop/download': '{}',
     // this is for regex-translator's CLI so it can probably go away
     // if it is only used at build time, as it should
     'winston': '{}', 'wordwrap': '{}', 'table-layout': '{}', 'env-paths': '{}', 'command-line-usage': '{}', 
