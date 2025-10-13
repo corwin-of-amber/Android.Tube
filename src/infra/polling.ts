@@ -7,20 +7,24 @@ class Polling {
     op: () => void
     _every: number
     active: boolean = false
-    mon: NodeJS.Timeout
+    mon?: NodeJS.Timeout
 
-    _listener: () => void
+    _listener?: () => void
 
-    constructor(op: () => void, every: number) {
+    constructor(op: () => void, every: number, options: {background?: boolean} = {}) {
         this.op = op;
         this._every = every;
 
-        this._listener = () => this._vis();
-        document.addEventListener('visibilitychange', this._listener);
+        if (!options.background) {
+            this._listener = () => this._vis();
+            document.addEventListener('visibilitychange', this._listener);
+        }
     }
 
     destroy() {
-        document.removeEventListener('visibilitychange', this._listener);
+        this.stop();
+        if (this._listener)
+            document.removeEventListener('visibilitychange', this._listener);
     }
 
     get every() { return this._every }
@@ -29,21 +33,39 @@ class Polling {
         if (this._every !== ms) {
             this.pause();
             this._every = ms;
-            this.resume();
+            this.resume(false);
         }
     }
 
-    start() {
+    start(now: boolean = true) {
         if (this.mon === undefined) {
             this.mon = setInterval(() => this._poll(), this.every);
-            this._poll();
+            if (now) this._poll();
         }
         this.active = true;
+        return this;
     }
 
     stop() {
         this.pause();
         this.active = false;
+    }
+
+    now() {
+        if (this.active && !(this._listener && document.hidden)) {
+            this.pause();
+            this.resume(true);  // to reset the interval
+        }
+        else
+            this._poll();
+        return this;
+    }
+
+    defer() {
+        if (this.active) {
+            this.pause();
+            this.resume(false);  // to reset the interval
+        }
     }
 
     pause() {
@@ -53,8 +75,8 @@ class Polling {
         }
     }
 
-    resume() {
-        this.start();  // nothing special here
+    resume(now?: boolean) {
+        this.start(now);  // nothing special here
     }
 
     _poll() {

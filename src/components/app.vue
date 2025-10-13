@@ -14,7 +14,7 @@
             <progress-bar class="upload-progress" v-bind="ongoing.upload" v-if="ongoing.upload"/>
         </span>
     </div>
-    <app-context-menu ref="menu" @action="menuAction"/>
+    <app-context-menu ref="menu" :clientConnected="!!client" @action="menuAction"/>
 </template>
 
 <script lang="ts">
@@ -70,6 +70,8 @@ class IApp extends Vue {
     @Ref playlistPane: any
     @Ref controlPanel: IControlPanel
     @Ref menu: IAppContextMenu
+
+    local: {controls: PlayerControls}
 
     mounted() {
         this.init = true;
@@ -148,9 +150,15 @@ class IApp extends Vue {
     /** REMOTE PART **/
 
     connect() {
+        this.local ??= {controls: this.controls};
         this.client = new ClientPlayerCore();
         this.client.upload.remoteKeys = this.uploadedTrackIds;
         this.controls = new ClientPlayerControls();
+    }
+
+    disconnect() {
+        this.client = undefined;
+        this.controls = this.local.controls;
     }
 
     async upload(file, name) {
@@ -231,6 +239,9 @@ class IApp extends Vue {
             break;
         case 'connect':
             this.connect();
+            break;
+        case 'disconnect':
+            this.disconnect();
             break;
         case 'play-remote':
             this.remotePlay(action.for.item, false, false, 'play');

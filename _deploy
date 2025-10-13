@@ -1,3 +1,4 @@
-adb uninstall amber.corwin.youtube
-adb install ./app/build/outputs/apk/debug/app-debug.apk
-adb shell am start amber.corwin.youtube/amber.corwin.youtube.MainActivity
+D=$1
+adb -s $D uninstall amber.corwin.youtube
+adb -s $D install ./app/build/outputs/apk/debug/app-debug.apk
+adb -s $D shell am start amber.corwin.youtube/amber.corwin.youtube.MainActivity

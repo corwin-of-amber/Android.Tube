@@ -33,7 +33,7 @@ class FileInputElement {
         let el = this.el;
         return new Promise(resolve => {
             el.addEventListener('change', () => {
-                if (el.files[0]) resolve(el.files[0] as FileEx);
+                if (el.files?.[0]) resolve(el.files[0] as FileEx);
             });
             el.click();
         });
