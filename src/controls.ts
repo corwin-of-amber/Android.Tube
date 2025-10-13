@@ -91,11 +91,16 @@ abstract class VolumeControl {
 
     async delegate() {
         const max = 1000, ratio = max / this.max,
-              throttledSet = _.throttle(v => this.set(v), 250);
+              throttledSet = _.throttle(v => this.set(v), 150),
+              thresh = 100;
         return {
             _level: await this.get() * ratio,
             get level() { return this._level; },
-            set level(v: number) { this._level = v; throttledSet(v / ratio); },
+            set level(v: number) {
+                throttledSet(v / ratio);
+                if (Math.abs(this._level - v) > thresh) throttledSet.flush();
+                this._level = v;
+            },
             get max() { return max; }
         }
     }

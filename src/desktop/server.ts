@@ -64,8 +64,14 @@ class Server {
                 if (q) {
                     let mo = q.match(/^(\d+)\/(\d+)/);
                     if (mo) {
-                        assert(+mo[2] === this.state.volume.max);
-                        this.state.volume.level = +mo[1];
+                        // @ts-ignore
+                        if (this.controls === app.controls) {  /** @oops global */
+                            assert(+mo[2] === this.state.volume.max);
+                            this.state.volume.level = +mo[1];
+                        }
+                        else {
+                            this.controls.volume.set(+mo[1], +mo[2]);
+                        }
                     }
                 }
                 else {
