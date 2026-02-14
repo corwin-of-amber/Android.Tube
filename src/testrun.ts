@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import vm from 'vm';  /** @kremlin.native */
 
+import _ from 'lodash';
 import rex from 'regex-translator';
 
 
@@ -30,10 +31,14 @@ class YouTubeTestRun {
     async getInfoCompat() {
         let resp = await this.getInfoTV();
 
+        if (resp['streamingData']['serverAbrStreamingUrl'])  // experiment
+            console.log('Abr', this.decrypt.decipherStreamURL(
+                {url: resp['streamingData']['serverAbrStreamingUrl']}));
+
         return {
             csn: undefined,
             formats: resp['streamingData']['adaptiveFormats'].map(fmt =>
-                this.decrypt.decipherStreamURL(fmt))
+                this.decrypt.decipherStreamURL(fmt)).filter(x => x)
         };
     }
 
@@ -41,14 +46,15 @@ class YouTubeTestRun {
         let {ytcfg: web, playerUrl} = await this.processWatchPage();
         let ytcfg = {
             'web': web,
-            'tv': await this.processClientPageTV()
+            'tv': await this.processClientPageTV(),
+            'android': _.merge(_.cloneDeep(web), INNERTUBE_CLIENTS['android_vr'])
         };
-        console.log(ytcfg);
+        console.log('[ytcfg]', ytcfg);
 
         this.player = await new PlayerJS().fromURL(playerUrl);
 
-        let resp = await this.makeApiRequest(ytcfg.tv, '/youtubei/v1/player?prettyPrint=false')
-        console.log('resp', resp);
+        let resp = await this.makeApiRequest(ytcfg.android, '/youtubei/v1/player?prettyPrint=false')
+        console.log('[resp]', resp);
 
         this.decrypt = new DecryptFuncs().fromPlayerJS(this.player);
 
@@ -112,7 +118,7 @@ class YouTubeTestRun {
 
     // yt-dlp:_video.py:_extract_player_url
     extract_player_url(ytcfg, variant="main") {
-        let player_id = '0004de42'  // this is currently hard-coded in yt-dlp:_video.py:_get_player_js_version
+        let player_id = '25f1a420'  // this is currently hard-coded in yt-dlp:_video.py:_get_player_js_version
         let p = //ytcfg['PLAYER_JS_URL']; /** @todo */
             `/s/player/${player_id}/${YouTubeTestRun._PLAYER_JS_VARIANT_MAP[variant]}`
         return new URL(p, this.DOMAIN);
@@ -137,6 +143,7 @@ class YouTubeTestRun {
 
     // yt-dlp:_video.py:_extract_visitor_data
     extract_visitor_data(ytcfg) {
+        console.warn(ytcfg);
         return ytcfg?.INNERTUBE_CONTEXT?.client?.visitorData;
         /*
         if visitor_data := self._configuration_arg('visitor_data', [None], ie_key=CONFIGURATION_ARG_KEY, casesense=True)[0]:
@@ -342,15 +349,29 @@ class YouTubeTestRun {
                 ...query
             };
 
+        console.log('[api]', path, headers, data);
+
         let req = await this._fetch(new URL(path, this.DOMAIN),
             {method: 'POST', headers, body: JSON.stringify(data)});
 
         return await req.json();
     }
-    
-    async replayFromYtdlp(header: string, body: string = undefined) {
 
-        const getBytes = s => s.match(/send: b'(.*)'/)[1].replace(/\\r\\n/g, '\r\n');
+    async replayFromYtdlp(header: string, body: string = undefined) {
+        let [url, opts] = this.parseFromYtdlp(header, body);
+
+        let req = await this._fetch(url, opts);
+        
+        return await req.json();
+    }
+
+    parseFromYtdlp(header: string, body: string = undefined): [URL, RequestInit] {
+        if (body === undefined && header.includes('\n')) {
+            [header, body] = header.split('\n');
+        }
+
+        const getBytes = (s: string) =>
+            s.match(/send: b'(.*)'/)[1].replace(/\\r\\n/g, '\r\n');
 
         let h = getBytes(header), b = body ? getBytes(body) : undefined,
             [, method, path] = h.match(/(POST|GET) (\S+)/),
@@ -359,13 +380,30 @@ class YouTubeTestRun {
 
         console.log(method, path, headers, b && JSON.parse(b));
 
-        let req = await this._fetch(new URL(path, this.DOMAIN),
-            {method: method, headers, credentials: 'same-origin', body: b});
-        
-        return await req.json();
-    }    
+        return [new URL(path, this.DOMAIN),
+            {method: method, headers, credentials: 'same-origin', body: b}];
+    }
 }
 
+
+const INNERTUBE_CLIENTS = {
+    'android_vr': {
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'ANDROID_VR',
+                'clientVersion': '1.71.26',
+                'deviceMake': 'Oculus',
+                'deviceModel': 'Quest 3',
+                "androidSdkVersion": 32,
+                'userAgent': 'com.google.android.apps.youtube.vr.oculus/1.71.26 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
+                'osName': 'Android',
+                'osVersion': '12L',
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 28,
+        'REQUIRE_JS_PLAYER': false,
+    },    
+}
 
 
 class DecryptFuncs {
@@ -395,8 +433,11 @@ class DecryptFuncs {
     }
 
     decipherStreamURL(format) {
+        if (!format['signatureCipher'] && !format['url'])
+            return undefined;
+
         let sp = new URLSearchParams(format['signatureCipher']),
-            url = new URL(format.url ?? sp.get('url'));
+            url = new URL(format['url'] ?? sp.get('url'));
         console.log(Object.fromEntries(sp.entries()));
         console.log(Object.fromEntries(url.searchParams.entries()));
 
@@ -405,9 +446,10 @@ class DecryptFuncs {
             n = url.searchParams.get('n');
         console.log({sigkey, s, n});
 
-        if (s && sigkey)
+        if (s && sigkey && typeof this.sig === 'function')
             url.searchParams.set(sigkey, this.sig(s));
-        url.searchParams.set('n', this.nsig(n));
+        if (typeof this.nsig === 'function')
+            url.searchParams.set('n', this.nsig(n));
         console.log(url.href);
 
         format.url = url.href;
@@ -429,7 +471,8 @@ class DecryptFuncs {
             String.raw`(?:\b|[^a-zA-Z0-9_$])(?P<sig>[a-zA-Z0-9_$]{2,})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9_$]{2}\.[a-zA-Z0-9_$]{2}\(a,\d+\))?`
         ].map(py => this._(py)), script);
 
-        assert(funcname.length >= 1);
+        if (funcname.length === 0) return ''
+        //assert(funcname.length >= 1);
         return funcname[0].groups['sig'];
         /* Python
         r'\b(?P<var>[a-zA-Z0-9_$]+)&&\((?P=var)=(?P<sig>[a-zA-Z0-9_$]{2,})\(decodeURIComponent\((?P=var)\)\)',
@@ -457,7 +500,8 @@ class DecryptFuncs {
         /** @todo validate the placeholders via `debug_str`: */
         /*  `arr[idx].endsWith('_w8_')` */
 
-        assert(funcname.length == 1);
+        if (funcname.length === 0) return '() => ""'
+        //assert(funcname.length == 1);
         return funcname[0].groups['funcname'];
 
         /* Python
