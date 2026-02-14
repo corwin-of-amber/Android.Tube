@@ -47,7 +47,8 @@ class YouTubeSearch {
 
     playlistItems(playlistId: string) {
         var self = this,
-            props = {playlistId: playlistId, maxResults: 50, part: 'snippet'};
+            props = {playlistId: this.asPlaylistId(playlistId),
+                     maxResults: 50, part: 'snippet'};
         return this.yapi('playlistItems', props)
             .then(function(results) {
                 return new YoutubePagedResults(
@@ -78,6 +79,16 @@ class YouTubeSearch {
             try { return ytdl.getURLVideoID(query); }
             catch (e) { return undefined; }
         }
+    }
+
+    asPlaylistId(idOrUrl: string) {
+        if (idOrUrl.startsWith('https://')) {
+            try {
+                return new URL(idOrUrl).searchParams.get('list') ?? idOrUrl;
+            }
+            catch { }
+        }
+        return idOrUrl;
     }
 
     postprocessItems(items: any[]): Track[] {

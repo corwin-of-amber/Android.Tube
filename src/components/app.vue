@@ -64,7 +64,7 @@ class IApp extends Vue {
     monitor: Polling
     init = false
 
-    client: ClientPlayerCore
+    client: ClientPlayerCore = undefined
 
     @Ref searchPane: any
     @Ref playlistPane: any
@@ -234,8 +234,7 @@ class IApp extends Vue {
             console.log('temp1', (<any>window).temp1 = action.for.item);
             break;
         case 'download':
-            AudioDownload.do(action.for.item, {},
-                this._monitorProgress('download'));
+            this.download([action.for.item]);
             break;
         case 'connect':
             this.connect();
@@ -256,6 +255,12 @@ class IApp extends Vue {
             this.remotePlay(action.for.item, true, true /* force upload */);
             break;
         }
+    }
+
+    download(items?) {
+        items ??= this.playlist.tracks;
+        return AudioDownload.do(items, {},
+            this._monitorProgress('download'));
     }
 
     remotePlay(item: Track, all, force, play?) {

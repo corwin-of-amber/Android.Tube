@@ -100,7 +100,9 @@ class AudioDownload {
         for (let item of items) {
             progress({}, YoutubeItem.title(item) || YoutubeItem.id(item) || '...');
             try {
-                await (await AudioDownload.fromTrack(item, trackMetadata)).do(progress);
+                let outfn = await (await
+                    AudioDownload.fromTrack(item, trackMetadata)).do(progress);
+                report.reportDone(item, outfn);
                 trackMetadata.track++;
             }
             catch (e) { report.reportSkipped(item, e); }
@@ -172,10 +174,11 @@ function fetchWithProgress(url, progress): Promise<Uint8Array> {
 }
 
 class DownloadReport {
-    skipped: {item: any, desc: string, error: Error}[]
+    done: {item: YoutubeItem, outfile: string}[] = []
+    skipped: {item: any, desc: string, error: Error}[] = []
 
-    constructor() {
-        this.skipped = [];
+    reportDone(item: YoutubeItem, outfile: string) {
+        this.done.push({item, outfile});
     }
 
     reportSkipped(item, error) {
@@ -185,8 +188,9 @@ class DownloadReport {
     }
 
     summary() {
+        console.log(`[yt] Downloaded ${this.done.length} tracks.`);
         if (this.skipped.length) {
-            console.warn(`skipped ${this.skipped.length} tracks:`);
+            console.warn(`[yt] skipped ${this.skipped.length} tracks:`);
             for (let skip of this.skipped) {
                 console.warn(` - ${skip.desc}`, skip);
             }

@@ -1,5 +1,6 @@
 import * as Vue from 'vue';
 import * as ytdl from '@distube/ytdl-core';
+import * as musicmd from 'music-metadata';
 
 import { AppState } from './model';
 import { Playlist } from './playlist';
@@ -29,11 +30,11 @@ declare var mainActivity: any;
 
 
 async function main() {
-    /*
+    
     let tr = new YouTubeTestRun('L5Ij7z1xh1M');
-    tr.go();
+    //tr.go();
     Object.assign(window, {tr});
-    */
+    
 
     app = Vue.createApp(App, {state: Vue.reactive(new AppState())}).mount('#app');
 
@@ -70,8 +71,38 @@ async function main() {
     window.addEventListener('message', msg => {
         console.log("message: " + JSON.stringify(msg), msg.data);
         if (typeof msg.data === 'string')
-            action(JSON.parse(msg.data));    
+            action(JSON.parse(msg.data));
     });
+
+    /**
+     * Compiles a list of downloaded tracks keyed by YouTube ID.
+     * @param d download directory
+     * @returns Map
+     */
+    async function downloaded(d = '/tmp/Android.Tube') {
+        const fs = require('fs') as typeof import('fs'), path = require('path');
+
+        const json = (s?: string) => {
+            try { return s && JSON.parse(s); } catch { return undefined; }
+        };
+
+        const getId = async (fn: string) => {
+            let md = await musicmd.parseBlob(new File(path.join(d, fn), ''));
+            for (let cmt of md.common.comment ?? []) {
+                let id = json(cmt.text)?.['youtube_id'];
+                if (id) return id;
+            }
+        };
+
+        return new Map((await Promise.all(
+            fs.readdirSync(d).map(async fn => {
+                let id = await getId(fn);
+                return id ? [[id, fn] as [string, string]] : []
+            })))
+            .flatMap(x => x));
+    }
+
+    Object.assign(window, {downloaded, musicmd});
 }
 
 async function action(cmd, opts?) {
