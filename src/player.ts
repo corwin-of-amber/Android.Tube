@@ -77,7 +77,7 @@ class YtdlPlayerCore {
                 }
             }
 
-            var webm = undefined;
+            var webm = audioFormats[0]; //undefined;
             for (let format of audioFormats) {
                 if (await this.isAccessible(format)) {
                     webm = format;

@@ -28,7 +28,7 @@ class AudioDownload {
     async do(progress: ProgressCallback = () => {}) {
         var outfile = this._filename(), id = this._id();
         console.log(`[download] ${id} ${outfile}`);
-        progress({id}, outfile);
+        progress({id} as any, outfile);
         if (this.interval) {    /* intervals must use `ffmpeg`'s fetch */
             await this._fetchMetadata();
             outfile = this._mktemp(outfile);
@@ -36,6 +36,7 @@ class AudioDownload {
         }
         else {   /* fetch using browser API because it's faster */
             var tmpfile = this._mktemp(`${this._id()}.dl.tmp`);
+            console.log('[download] temp file:', tmpfile);
             try {
                 await Promise.all([
                     this._fetch(tmpfile, progress),
@@ -53,8 +54,9 @@ class AudioDownload {
     }
 
     async _fetch(outfile: string, progress: ProgressCallback = () => {}) {
-        var abuf = await fetchWithProgress(this.url, progress);
-        fs.writeFileSync(outfile, new Uint8Array(abuf));
+        await fetchChunked(this.url, {},
+            fs.createWriteStream(outfile), progress);
+        //fs.writeFileSync(outfile, new Uint8Array(abuf));
     }
 
     async _fetchMetadata() {
@@ -98,7 +100,7 @@ class AudioDownload {
         var trackMetadata = {...metadata, track: metadata.track || 1},
             report = new DownloadReport;
         for (let item of items) {
-            progress({}, YoutubeItem.title(item) || YoutubeItem.id(item) || '...');
+            progress({} as any, YoutubeItem.title(item) || YoutubeItem.id(item) || '...');
             try {
                 let outfn = await (await
                     AudioDownload.fromTrack(item, trackMetadata)).do(progress);
@@ -158,9 +160,53 @@ class AudioDownload {
 }
 
 type Interval = {from: number, to: number}
-type ProgressCallback = (state, filename?: string) => void
+type ProgressCallback = (state: {uri: string, total: number, loaded: number}, filename?: string) => void
 
 // Here comes some boilerplate
+
+async function fetchChunked(url, headers, out: fs.WriteStream, progress: ProgressCallback = () => {}) {
+    let chunkSize = 1 << 23, maxChunks = 100,
+        downloaded = 0;
+
+    for (let idx = 0; idx < maxChunks; idx++) {
+        let chunk = `bytes=${idx * chunkSize}-${(idx + 1) * chunkSize - 1}`,
+            status = await fetchWithProgress(url,
+                {...headers, 'Range': chunk},
+                out, (p, fn) => {
+                    if (p.total > 1)
+                        progress({uri: p.uri, total: p.total, loaded: p.loaded}, fn)
+                });
+        downloaded += status.downloaded;
+        console.log(downloaded, status.total);
+        if (downloaded >= status.total)
+            break;
+    }
+}
+
+async function fetchWithProgress(url, headers, out: fs.WriteStream, progress: ProgressCallback = () => {}) {
+    progress({uri: url, total: 1, loaded: 0}); /* dummy entry */
+    let downloaded = 0;
+
+    var response = await fetch(url, {headers}),
+        total = +response.headers.get('Content-Length'),
+        r = response.body.getReader();
+
+    let crng = response.headers.get('Content-Range');
+    if (crng) {
+        total = +(crng.match(/\/(\d+)/)?.[1] ?? total)
+        console.log('[download] total', total);
+    }
+
+    for(;;) {
+        var {value, done} = await r.read();
+        if (done) break;
+        out.write(value);
+        downloaded += value.length;
+        progress({uri: url, total, loaded: downloaded})
+    }
+    return {uri: url, total, downloaded};
+}
+/*
 function fetchWithProgress(url, progress): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
@@ -171,7 +217,7 @@ function fetchWithProgress(url, progress): Promise<Uint8Array> {
         xhr.open('GET', url);
         xhr.send();
     });
-}
+}*/
 
 class DownloadReport {
     done: {item: YoutubeItem, outfile: string}[] = []
