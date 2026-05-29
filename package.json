@@ -39,7 +39,6 @@
         "@types/node": "^22.5.0",
         "async_hooks": "^1.0.0",
         "babel-loader": "^9.1.3",
-        "browserify": "^17.0.0",
         "css-loader": "^7.1.2",
         "http2": "^3.3.6",
         "regex-translator": "^0.2.8",
