@@ -35,10 +35,20 @@ class YouTubeSearch {
 
     search(query) {
         var id = this.asVideoId(query),
+            plid = this.asPlaylistId(query, true),
             resp = id ? this.yapi('videos', {id, part: 'snippet,contentDetails'})
-                      : this.yapi('search', {maxResults: 50, part: 'snippet', q: query});
+               : plid ? this.yapi('playlists', {id: plid, part: 'snippet,contentDetails'})
+                      : this.yapi('search', {maxResults: 50, part: 'snippet', q: query, type: this.type(query)});
 
         return resp.then(({items}) => ({items: this.postprocessItems(items as any[])}));
+    }
+
+    type(query) {
+        switch (query[0]) {
+            case ':': return 'playlist';
+            case '@': return 'channel';
+            default: return 'video,playlist';
+        }
     }
 
     page(pageToken) {
@@ -81,19 +91,22 @@ class YouTubeSearch {
         }
     }
 
-    asPlaylistId(idOrUrl: string) {
+    asPlaylistId(idOrUrl: string, strict: boolean = false) {
+        let dft = strict ? undefined : idOrUrl;
         if (idOrUrl.startsWith('https://')) {
             try {
-                return new URL(idOrUrl).searchParams.get('list') ?? idOrUrl;
+                return new URL(idOrUrl).searchParams.get('list') ?? dft;
             }
             catch { }
         }
-        return idOrUrl;
+        return dft;
     }
 
     postprocessItems(items: any[]): Track[] {
+        console.warn(items);
+        const kinds = ['youtube#video', 'youtube#playlist', 'youtube#channel']
         return items.flatMap(item =>
-            YoutubeItem.kind(item) === 'youtube#video' ? Track.fromYoutubeSearchResult(item) : []);
+            kinds.includes(YoutubeItem.kind(item)) ? Track.fromYoutubeSearchResult(item) : []);
     }
 
     _details(videoId) {

@@ -46,17 +46,16 @@ export default {
             this.$emit('update:playlist', playlist);
             return playlist;
         },
-        loadPlaylist(id) {
-            var self = this;
-            return Playlist.loadFromServer(id).then(function(playlist) {
-                self.$emit('update:playlist', playlist); return playlist;
-            });
+        async loadPlaylist(id) {
+            let playlist = await Playlist.loadFromServer(id);
+            this.$emit('update:playlist', playlist);
+            return playlist;
         },
-        importPlaylist(youtubePlaylistId) {
-            var self = this;
-            yapi.playlistItemsAll(youtubePlaylistId).then(function(items) {
-                self.$emit('update:playlist', new Playlist('Imported').importYoutube(items));
-            });
+        async importPlaylist(youtubePlaylistId) {
+            let items = await yapi.playlistItemsAll(youtubePlaylistId),
+                playlist = new Playlist('Imported').importYoutube(items);
+            this.$emit('update:playlist', playlist);
+            return playlist;
         },
         importTracks(youtubeItem) {
             var self = this,

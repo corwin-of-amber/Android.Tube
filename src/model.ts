@@ -53,6 +53,7 @@ class Track {
 
     static async snippetFromBlob(blob: Blob) {
         let metadata = await musicmd.parseBlob(blob);
+        delete metadata.common['picture'];  // might be too large (and this is expected to be stored in JSON format)
         // -- more stuff here
         return {...metadata.common, duration: metadata.format.duration};
     }

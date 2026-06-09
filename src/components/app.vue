@@ -115,21 +115,29 @@ class IApp extends Vue {
         return this.searchPane.search(query, opts);
     }
 
-    startTrack(item, opts) {
+    async startTrack(item, opts) {
         var self = this, operation;
         this.status = 'pending';
         this.curPlaying = item;
 
-        if (this.playlist?.has(item)) {
-            operation = playerCore.watchFromList(
-                this.playlist.export(item),
-                    {...opts, onend: () => this.playNext()});
+        try {
+            if (item.id.kind === 'youtube#playlist') {
+                this.status = 'playing';
+                await this.playlistPane.importPlaylist(item.id.id);
+            }
+            else if (this.playlist?.has(item)) {
+                await playerCore.watchFromList(
+                    this.playlist.export(item),
+                        {...opts, onend: () => this.playNext()});
+            }
+            else {
+                await playerCore.watch(item.uri || YoutubeItem.id(this.curPlaying), opts);
+            }
+            this.status = 'playing';
         }
-        else {
-            operation = playerCore.watch(item.uri || YoutubeItem.id(this.curPlaying), opts);
+        catch (e) {
+            console.error(e); self.status = 'error';
         }
-        operation.then(function() { self.status = 'playing'; })
-                 .catch(function(e) { console.error(e); self.status = 'error'; });
     }
 
     playNext() {

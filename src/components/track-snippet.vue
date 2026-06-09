@@ -2,7 +2,7 @@
     <p class="video-snippet" :class="spotlight || {}"
             draggable="true" @dragstart="dragStart"
             @contextmenu.prevent.stop="menu">
-        <span class="title" v-html="item.title ?? item.snippet?.title ?? '(no title)'"></span>
+        <span class="title">{{ icon(item) }}<span v-html="item.title ?? item.snippet?.title ?? '(no title)'"></span></span>
         <span class="duration" v-if="item.duration !== undefined">{{timestamp(item.duration)}}</span>
     </p>
 </template>
@@ -34,6 +34,9 @@ export default {
                 .catch(function(e) { console.error(e); self.duration = -1; })
                 */
             }
+        },
+        icon(item) {
+            return (item.id.kind === 'youtube#playlist') ? '🎼📙 ' : '';
         },
         timestamp(hms) {
             return hms ? hms.filter(x => x != undefined)
