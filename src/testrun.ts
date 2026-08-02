@@ -47,13 +47,17 @@ class YouTubeTestRun {
         let ytcfg = {
             'web': web,
             'tv': await this.processClientPageTV(),
-            'android': _.merge(_.cloneDeep(web), INNERTUBE_CLIENTS['android_vr'])
+            'android': INNERTUBE_CLIENTS['android_vr']
         };
+        //_.merge(_.cloneDeep(web), ytcfg.android) 
+        //ytcfg.android.INNERTUBE_CONTEXT.client.visitorData ??=
+        //    ytcfg.web.INNERTUBE_CONTEXT.client.visitorData
         console.log('[ytcfg]', ytcfg);
 
         this.player = await new PlayerJS().fromURL(playerUrl);
 
-        let resp = await this.makeApiRequest(ytcfg.android, '/youtubei/v1/player?prettyPrint=false')
+        let resp = await this.makeApiRequest(ytcfg.android, ytcfg.web,
+            '/youtubei/v1/player?prettyPrint=false')
         console.log('[resp]', resp);
 
         this.decrypt = new DecryptFuncs().fromPlayerJS(this.player);
@@ -141,10 +145,12 @@ class YouTubeTestRun {
         */
     }
 
-    // yt-dlp:_video.py:_extract_visitor_data
-    extract_visitor_data(ytcfg) {
-        console.warn(ytcfg);
-        return ytcfg?.INNERTUBE_CONTEXT?.client?.visitorData;
+    // yt-dlp:_base.py:_extract_visitor_data
+    extract_visitor_data(ytcfg, player_ytcfg) {
+        return this.dbgVal('visitor_data',
+            [ytcfg, player_ytcfg].map(ytcfg =>
+                ytcfg?.INNERTUBE_CONTEXT?.client?.visitorData).find(x => x)
+        );
         /*
         if visitor_data := self._configuration_arg('visitor_data', [None], ie_key=CONFIGURATION_ARG_KEY, casesense=True)[0]:
             return visitor_data
@@ -179,8 +185,10 @@ class YouTubeTestRun {
 
     // yt-dlp:_base.py:_extract_client_name
     extract_client_name(ytcfg) {
-        return ytcfg?.INNERTUBE_CLIENT_NAME ??
-               ytcfg?.INNERTUBE_CONTEXT?.client?.clientName;
+        return this.dbgVal('client_name',
+            ytcfg?.INNERTUBE_CLIENT_NAME ??
+            ytcfg?.INNERTUBE_CONTEXT?.client?.clientName
+        );
         /* Python
         return self._ytcfg_get_safe(
             ytcfg, (lambda x: x['INNERTUBE_CLIENT_NAME'],
@@ -190,8 +198,10 @@ class YouTubeTestRun {
 
     // yt-dlp:_base.py:_extract_client_version
     extract_client_version(ytcfg) {
-        return ytcfg?.INNERTUBE_CLIENT_VERSION ??
-               ytcfg?.INNERTUBE_CONTEXT?.client?.clientVersion;
+        return this.dbgVal('client_version',
+            ytcfg?.INNERTUBE_CLIENT_VERSION ??
+            ytcfg?.INNERTUBE_CONTEXT?.client?.clientVersion
+        );
         /* Python
         return self._ytcfg_get_safe(
             ytcfg, (lambda x: x['INNERTUBE_CLIENT_VERSION'],
@@ -267,13 +277,13 @@ class YouTubeTestRun {
         */
     }
 
-    generate_api_headers(ytcfg) {
+    generate_api_headers(ytcfg, player_ytcfg) {
         const origin = this.DOMAIN.href; /** @todo? */
         return {
             'X-YouTube-Client-Name': ytcfg?.INNERTUBE_CONTEXT_CLIENT_NAME,
             'X-YouTube-Client-Version': this.extract_client_version(ytcfg),
             'Origin': origin,
-            'X-Goog-Visitor-Id': this.extract_visitor_data(ytcfg),
+            'X-Goog-Visitor-Id': this.extract_visitor_data(ytcfg, player_ytcfg),
             'User-Agent': ytcfg?.INNERTUBE_CONTEXT?.client?.userAgent,  /* actually has no effect in NWjs */            
 
             'Content-Type': 'application/json'
@@ -341,8 +351,8 @@ class YouTubeTestRun {
         'tablet': 'player-plasma-ias-tablet-en_US.vflset/base.js',
     }
 
-    async makeApiRequest(ytcfg, path: string) {
-        let headers =  this.generate_api_headers(ytcfg),
+    async makeApiRequest(ytcfg, player_ytcfg, path: string) {
+        let headers =  this.generate_api_headers(ytcfg, player_ytcfg),
             query = this.generate_api_query(ytcfg, this.videoId),
             data = {
                 context: this.extract_context(ytcfg),
@@ -357,15 +367,26 @@ class YouTubeTestRun {
         return await req.json();
     }
 
-    async replayFromYtdlp(header: string, body: string = undefined) {
-        let [url, opts] = this.parseFromYtdlp(header, body);
+    dbgVal<T>(name: string, v?: T): T {
+        if (v === undefined)
+            console.warn(`[yt] missing ${name}`);
+        return v;
+    }
+
+    ytdlp = new FromYtdlp
+}
+
+class FromYtdlp {
+
+    async replayReq(header: string, body: string = undefined) {
+        let [url, opts] = this.parseReq(header, body);
 
         let req = await this._fetch(url, opts);
         
         return await req.json();
     }
 
-    parseFromYtdlp(header: string, body: string = undefined): [URL, RequestInit] {
+    parseReq(header: string, body: string = undefined): [URL, RequestInit] {
         if (body === undefined && header.includes('\n')) {
             [header, body] = header.split('\n');
         }
@@ -383,6 +404,15 @@ class YouTubeTestRun {
         return [new URL(path, this.DOMAIN),
             {method: method, headers, credentials: 'same-origin', body: b}];
     }
+
+    // sry this is dup
+
+    DOMAIN = new URL('https://www.youtube.com')
+    FETCH_OPTS: RequestInit = {credentials: 'omit'}
+
+    _fetch(url: URL | string, init?: RequestInit) {
+        return fetch(url, {...this.FETCH_OPTS, ...init});
+    }
 }
 
 
@@ -391,11 +421,11 @@ const INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT': {
             'client': {
                 'clientName': 'ANDROID_VR',
-                'clientVersion': '1.71.26',
+                'clientVersion': '1.65.10',
                 'deviceMake': 'Oculus',
                 'deviceModel': 'Quest 3',
                 "androidSdkVersion": 32,
-                'userAgent': 'com.google.android.apps.youtube.vr.oculus/1.71.26 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
+                'userAgent': 'com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
                 'osName': 'Android',
                 'osVersion': '12L',
             },
