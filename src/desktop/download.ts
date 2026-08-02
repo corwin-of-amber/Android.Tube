@@ -1,5 +1,6 @@
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg'; /** @kremlin.native */
+import retry from 'async-retry';
 import { YoutubeItem } from '../player';
 
 
@@ -102,12 +103,14 @@ class AudioDownload {
         for (let item of items) {
             progress({} as any, YoutubeItem.title(item) || YoutubeItem.id(item) || '...');
             try {
-                let outfn = await (await
-                    AudioDownload.fromTrack(item, trackMetadata)).do(progress);
+                let outfn = await retry(async () =>
+                    (await AudioDownload.fromTrack(item, trackMetadata))
+                        .do(progress),
+                    {retries: 2});
                 report.reportDone(item, outfn);
-                trackMetadata.track++;
+                trackMetadata.track++;                
             }
-            catch (e) { report.reportSkipped(item, e); }
+            catch (e) { report.reportSkipped(item, e); break; }
         }
         report.summary();
         progress(null);

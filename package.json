@@ -14,6 +14,7 @@
     },
     "dependencies": {
         "@distube/ytdl-core": "file:./packages/distubejs-ytdl-core",
+        "async-retry": "^1.3.3",
         "blob-stream": "^0.1.3",
         "commander": "^3.0.2",
         "concat-stream": "^2.0.0",
@@ -59,5 +60,10 @@
     },
     "app": {
         "icon": "app/src/desktop/img/Icon.icns"
+    },
+    "allowScripts": {
+        "github:corwin-of-amber/node-pty#25429cbad0ad55c01add4c0177cf971cdbbeb0d6": true,
+        "@parcel/watcher@2.5.1": true,
+        "file:../../Web.Kremlin": true
     }
 }
