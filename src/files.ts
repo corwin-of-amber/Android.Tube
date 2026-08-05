@@ -5,8 +5,7 @@ class DroppedFiles {
             return [await new Promise(resolve => entry.file(resolve))];
         }
         else if (entry.isDirectory) {
-            var entries = await new Promise<any[]>(resolve =>
-                entry.createReader().readEntries(resolve));
+            let entries = await Array.fromAsync(DroppedFiles.readDirectory(entry));
             return [].concat(...(await DroppedFiles.fromEntries(entries)));
         }
         else return [];
@@ -27,6 +26,16 @@ class DroppedFiles {
             if (entry) ret.push(DroppedFiles.fromEntry(entry));
         }
         return [].concat(...(await Promise.all(ret)));
+    }
+
+    static async *readDirectory(dir: FileSystemDirectoryEntry) {
+        let reader = dir.createReader();
+        while (true) {
+            let r = await new Promise<any[]>((resolve, reject) =>
+                reader.readEntries(resolve, reject));
+            if (r.length == 0) break;
+            yield* r;
+        }
     }
 }
 

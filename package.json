@@ -47,6 +47,7 @@
         "sass-loader": "^16.0.5",
         "style-loader": "^4.0.0",
         "ts-loader": "^9.5.2",
+        "typescript": "^7.0.2",
         "util": "^0.12.5",
         "vue-facing-decorator": "^3.0.4",
         "vue-loader": "^17.4.2",
